@@ -5,6 +5,7 @@
 - **Turbo mode allowed** for: running `flutter analyze`, `dart format .`, `flutter test`, adding `const`, renaming variables within a single file.
 - **Always verify** after implementing: run `flutter analyze` and confirm zero errors before finishing.
 - **Prefer surgical edits** — change only what is necessary. Do not reformat unrelated code.
+- **Figma access:** When referencing Figma for UI tasks, always use the **browser subagent** to open Figma URLs and capture screenshots. The `read_url_content` tool cannot access Figma (returns 403). Use `docs/Figma.md` for the list of Figma page URLs. Always visually inspect the Figma frame before implementing any screen.
 
 ## Context Loading Priority
 When starting any task, load context in this order:
