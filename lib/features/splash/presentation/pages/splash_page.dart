@@ -1,17 +1,14 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_typography.dart';
 import '../../../../app/router/app_router.dart';
 
-/// Splash screen with animated logo and gradient background.
+/// Splash screen with animated official logo and gradient background.
 ///
-/// No BLoC needed — purely visual with auto-navigation to login.
+/// Navigates to login screen after the progress bar animation finishes.
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
@@ -44,7 +41,7 @@ class _SplashPageState extends State<SplashPage>
     );
 
     // Logo scales up slightly during first 40%
-    _scaleUp = Tween<double>(begin: 0.85, end: 1.0).animate(
+    _scaleUp = Tween<double>(begin: 0.9, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
@@ -59,17 +56,20 @@ class _SplashPageState extends State<SplashPage>
       ),
     );
 
-    _controller.forward();
+    // To prevent the initial shader compilation jank from skipping the splash screen,
+    // we start the animation and the timer AFTER the first frame is fully rendered.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _controller.forward();
 
-    // Navigate to login after splash
-    Future.delayed(
-      AppConstants.splashDuration + const Duration(milliseconds: 300),
-      () {
-        if (mounted) {
-          context.go(AppRoutes.login);
-        }
-      },
-    );
+      Future.delayed(
+        AppConstants.splashDuration + const Duration(milliseconds: 300),
+        () {
+          if (mounted) {
+            context.go(AppRoutes.login);
+          }
+        },
+      );
+    });
   }
 
   @override
@@ -122,47 +122,10 @@ class _SplashPageState extends State<SplashPage>
   }
 
   Widget _buildLogo() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Logo icon — 5 circles in a ring
-        SizedBox(
-          width: 72,
-          height: 72,
-          child: CustomPaint(painter: _LogoCirclesPainter()),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        // App name
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              'Carehub',
-              style: AppTypography.headlineMedium.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            Text(
-              '+',
-              style: AppTypography.headlineMedium.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        // Tagline
-        Text(
-          'Cuidar com leveza, juntos',
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ],
+    return Image.asset(
+      'assets/images/logo_oficial.png',
+      width: 280,
+      fit: BoxFit.contain,
     );
   }
 
@@ -197,46 +160,4 @@ class _SplashPageState extends State<SplashPage>
       ),
     );
   }
-}
-
-/// Custom painter that draws the CareHub+ logo — 5 colored circles in a ring.
-class _LogoCirclesPainter extends CustomPainter {
-  static const List<Color> _colors = [
-    Color(0xFF7B61C8), // Purple
-    Color(0xFFE91E8C), // Pink
-    Color(0xFFF5C842), // Yellow
-    Color(0xFF4FC3F7), // Blue
-    Color(0xFF66BB6A), // Green
-  ];
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width * 0.35;
-    const circleRadius = 7.0;
-    const ringStroke = 2.0;
-
-    // Draw connecting ring
-    final ringPaint = Paint()
-      ..color = const Color(0xFF7B61C8).withValues(alpha: 0.3)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = ringStroke;
-    canvas.drawCircle(center, radius, ringPaint);
-
-    // Draw 5 colored circles
-    for (var i = 0; i < 5; i++) {
-      final angle = (i * 72 - 90) * math.pi / 180;
-      final x = center.dx + radius * math.cos(angle);
-      final y = center.dy + radius * math.sin(angle);
-
-      final paint = Paint()
-        ..color = _colors[i]
-        ..style = PaintingStyle.fill;
-
-      canvas.drawCircle(Offset(x, y), circleRadius, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
