@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -24,7 +25,8 @@ class SocialLoginButtons extends StatelessWidget {
         Expanded(
           child: _SocialButton(
             label: 'GOOGLE',
-            icon: _GoogleIcon(),
+            icon: const _GoogleIcon(),
+            textColor: const Color(0xFF4285F4),
             onPressed: enabled ? onGooglePressed : null,
           ),
         ),
@@ -33,6 +35,7 @@ class SocialLoginButtons extends StatelessWidget {
           child: _SocialButton(
             label: 'FACEBOOK',
             icon: const _FacebookIcon(),
+            textColor: const Color(0xFF3B5998),
             onPressed: enabled ? onFacebookPressed : null,
           ),
         ),
@@ -45,11 +48,13 @@ class _SocialButton extends StatelessWidget {
   const _SocialButton({
     required this.label,
     required this.icon,
+    required this.textColor,
     required this.onPressed,
   });
 
   final String label;
   final Widget icon;
+  final Color textColor;
   final VoidCallback? onPressed;
 
   @override
@@ -59,7 +64,7 @@ class _SocialButton extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.textPrimary,
+          foregroundColor: textColor,
           backgroundColor: AppColors.background,
           side: const BorderSide(color: AppColors.border),
           shape: RoundedRectangleBorder(
@@ -75,8 +80,8 @@ class _SocialButton extends StatelessWidget {
             Text(
               label,
               style: AppTypography.labelLarge.copyWith(
-                color: AppColors.textPrimary,
-                fontSize: 12,
+                color: textColor,
+                fontSize: 14,
                 letterSpacing: 0.5,
               ),
             ),
@@ -87,86 +92,26 @@ class _SocialButton extends StatelessWidget {
   }
 }
 
-/// Simplified Google "G" icon using painting.
+/// Google brand icon.
 class _GoogleIcon extends StatelessWidget {
+  const _GoogleIcon();
+
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return SvgPicture.asset(
+      'assets/images/logo_google.svg',
       width: 18,
       height: 18,
-      child: CustomPaint(painter: _GoogleLogoPainter()),
     );
   }
 }
 
-class _GoogleLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final center = rect.center;
-    final radius = size.width / 2;
-
-    // Red arc (top-right)
-    final redPaint = Paint()
-      ..color = const Color(0xFFEA4335)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawArc(rect.deflate(1.5), -0.5, -1.2, false, redPaint);
-
-    // Yellow arc (bottom-right)
-    final yellowPaint = Paint()
-      ..color = const Color(0xFFFBBC05)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawArc(rect.deflate(1.5), -1.7, -1.2, false, yellowPaint);
-
-    // Green arc (bottom-left)
-    final greenPaint = Paint()
-      ..color = const Color(0xFF34A853)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawArc(rect.deflate(1.5), -2.9, -1.2, false, greenPaint);
-
-    // Blue arc (top-left)
-    final bluePaint = Paint()
-      ..color = const Color(0xFF4285F4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawArc(rect.deflate(1.5), 0.7, -1.2, false, bluePaint);
-
-    // Horizontal bar (Google's "G" bar)
-    final barPaint = Paint()
-      ..color = const Color(0xFF4285F4)
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(
-      Rect.fromLTWH(center.dx - 1, center.dy - 1.5, radius - 1, 3),
-      barPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-/// Facebook "f" icon.
+/// Facebook brand icon.
 class _FacebookIcon extends StatelessWidget {
   const _FacebookIcon();
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      'f',
-      style: TextStyle(
-        fontFamily: 'serif',
-        fontSize: 20,
-        fontWeight: FontWeight.w900,
-        color: const Color(0xFF1877F2),
-        height: 1.0,
-      ),
-    );
+    return SvgPicture.asset('assets/images/logo_facebook.svg', height: 18);
   }
 }

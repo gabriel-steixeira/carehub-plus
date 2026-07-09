@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
-
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -76,7 +75,7 @@ class _LoginFormState extends State<LoginForm> {
               AppTextField(
                 controller: _passwordController,
                 label: 'Senha',
-                hint: 'Senha',
+                hint: 'Sua senha segura',
                 prefixIcon: Icons.lock_outline_rounded,
                 obscureText: _obscurePassword,
                 textInputAction: TextInputAction.done,
@@ -104,7 +103,7 @@ class _LoginFormState extends State<LoginForm> {
                   onPressed: isLoading
                       ? null
                       : () {
-                          // TODO: Navigate to forgot password screen
+                          context.go(AppRoutes.forgotPassword);
                         },
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
@@ -115,6 +114,7 @@ class _LoginFormState extends State<LoginForm> {
                     'Esqueci minha senha',
                     style: AppTypography.bodyMedium.copyWith(
                       color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -165,7 +165,7 @@ class _LoginFormState extends State<LoginForm> {
               // Divider
               Row(
                 children: [
-                  const Expanded(child: Divider()),
+                  const Expanded(child: Divider(color: AppColors.textHint)),
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.md,
@@ -175,10 +175,11 @@ class _LoginFormState extends State<LoginForm> {
                       style: AppTypography.labelSmall.copyWith(
                         color: AppColors.textHint,
                         letterSpacing: 1.0,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                  const Expanded(child: Divider()),
+                  const Expanded(child: Divider(color: AppColors.textHint)),
                 ],
               ),
 
@@ -198,35 +199,7 @@ class _LoginFormState extends State<LoginForm> {
                   );
                 },
               ),
-
-              const SizedBox(height: AppSpacing.xl),
-
-              // Register link
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Ainda não tem conta? ',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: isLoading
-                        ? null
-                        : () {
-                            context.go(AppRoutes.register);
-                          },
-                    child: Text(
-                      'Cadastre-se',
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              const SizedBox(height: AppSpacing.sm),
             ],
           ),
         );

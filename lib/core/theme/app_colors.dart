@@ -7,7 +7,7 @@ class AppColors {
   AppColors._();
 
   // PRIMARY
-  static const Color primary = Color(0xFF7B61C8);
+  static const Color primary = Color(0xFFA78BFA);
   static const Color primaryLight = Color(0xFFAF9EE0);
   static const Color primaryDark = Color(0xFF5A44A8);
 
@@ -18,23 +18,18 @@ class AppColors {
 
   // GRADIENT (Figma: purple → white → pink)
   static const LinearGradient primaryGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFA78BDB), Color(0xFFFFFFFF), Color(0xFFFACFE8)],
+    begin: Alignment(0.0, -2.5),
+    end: Alignment(0.0, 1.8),
+    colors: [Color(0xFFA78BFA), Color(0xFFFFFFFF), Color(0xF5FBCFE8)],
     stops: [0.09, 0.57, 1.0],
   );
 
   // Splash/Auth background gradient (vertical, lilac top → pink-white bottom)
   static const LinearGradient splashGradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [
-      Color(0xFFE8DFFA),
-      Color(0xFFF3EEFF),
-      Color(0xFFFDF6FA),
-      Color(0xFFFFFFFF),
-    ],
-    stops: [0.0, 0.35, 0.7, 1.0],
+    begin: Alignment(0.0, -2.5),
+    end: Alignment(0.0, 1.8),
+    colors: [Color(0xFFA78BFA), Color(0xFFFFFFFF), Color(0xF5FBCFE8)],
+    stops: [0.09, 0.57, 1.0],
   );
 
   // Progress bar gradient (purple → blue → green → pink)

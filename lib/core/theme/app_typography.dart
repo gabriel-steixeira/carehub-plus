@@ -12,7 +12,7 @@ class AppTypography {
   // Display
   static TextStyle get displayLarge => TextStyle(
     fontFamily: _fontFamily,
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: FontWeight.w700,
     height: 1.25,
   );
@@ -58,7 +58,7 @@ class AppTypography {
   // Labels
   static TextStyle get labelLarge => TextStyle(
     fontFamily: _fontFamily,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: FontWeight.w600,
     height: 1.43,
   );

@@ -44,3 +44,13 @@ class AuthSignUpSubmitted extends AuthEvent {
   @override
   List<Object?> get props => [name, email, password];
 }
+
+/// Requested password reset email.
+class AuthPasswordResetRequested extends AuthEvent {
+  const AuthPasswordResetRequested({required this.email});
+
+  final String email;
+
+  @override
+  List<Object?> get props => [email];
+}

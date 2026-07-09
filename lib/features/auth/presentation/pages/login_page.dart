@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../bloc/auth_bloc.dart';
 import '../widgets/login_form.dart';
@@ -35,12 +38,12 @@ class _LoginView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: Column(
               children: [
-                const SizedBox(height: AppSpacing.xxxl),
+                const SizedBox(height: AppSpacing.xxl),
 
                 // Logo (smaller version for login)
                 _buildLogo(),
 
-                const SizedBox(height: AppSpacing.xxxl),
+                const SizedBox(height: AppSpacing.xxl),
 
                 // Login card
                 Container(
@@ -60,6 +63,11 @@ class _LoginView extends StatelessWidget {
                 ),
 
                 const SizedBox(height: AppSpacing.xl),
+
+                // Register link (outside/below the card)
+                const _RegisterLink(),
+
+                const SizedBox(height: AppSpacing.xl),
               ],
             ),
           ),
@@ -73,6 +81,45 @@ class _LoginView extends StatelessWidget {
       'assets/images/logo_oficial.png',
       width: 300,
       fit: BoxFit.contain,
+    );
+  }
+}
+
+class _RegisterLink extends StatelessWidget {
+  const _RegisterLink();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        final isLoading = state.status == AuthStatus.loading;
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Ainda não tem conta? ',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            GestureDetector(
+              onTap: isLoading
+                  ? null
+                  : () {
+                      context.go(AppRoutes.register);
+                    },
+              child: Text(
+                'Cadastre-se',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

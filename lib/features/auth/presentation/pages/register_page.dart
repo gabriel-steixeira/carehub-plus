@@ -53,12 +53,12 @@ class _RegisterView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: AppSpacing.xxl),
 
-                  // Small logo in top-left
-                  _buildLogo(),
+                  // Logo (same as login)
+                  Center(child: _buildLogo()),
 
-                  const SizedBox(height: AppSpacing.xl),
+                  const SizedBox(height: AppSpacing.xxl),
 
                   // Title and subtitle
                   Text(
@@ -95,6 +95,11 @@ class _RegisterView extends StatelessWidget {
                   ),
 
                   const SizedBox(height: AppSpacing.xl),
+
+                  // Login link (outside/below the card)
+                  const _LoginLink(),
+
+                  const SizedBox(height: AppSpacing.xl),
                 ],
               ),
             ),
@@ -106,9 +111,48 @@ class _RegisterView extends StatelessWidget {
 
   Widget _buildLogo() {
     return Image.asset(
-      'assets/images/logo_pequeno.png',
-      width: 140,
+      'assets/images/logo_oficial.png',
+      width: 300,
       fit: BoxFit.contain,
+    );
+  }
+}
+
+class _LoginLink extends StatelessWidget {
+  const _LoginLink();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        final isLoading = state.status == AuthStatus.loading;
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Já tem uma conta? ',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            GestureDetector(
+              onTap: isLoading
+                  ? null
+                  : () {
+                      context.go(AppRoutes.login);
+                    },
+              child: Text(
+                'Entre',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

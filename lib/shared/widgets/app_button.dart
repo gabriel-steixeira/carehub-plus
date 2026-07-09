@@ -16,6 +16,7 @@ class AppButton extends StatelessWidget {
     this.variant = AppButtonVariant.primary,
     this.isLoading = false,
     this.icon,
+    this.suffixIcon,
     this.fullWidth = true,
   });
 
@@ -24,6 +25,7 @@ class AppButton extends StatelessWidget {
   final AppButtonVariant variant;
   final bool isLoading;
   final IconData? icon;
+  final IconData? suffixIcon;
   final bool fullWidth;
 
   @override
@@ -104,13 +106,19 @@ class AppButton extends StatelessWidget {
       );
     }
 
-    if (icon != null) {
+    if (icon != null || suffixIcon != null) {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 20),
-          const SizedBox(width: AppSpacing.sm),
+          if (icon != null) ...[
+            Icon(icon, size: 20),
+            const SizedBox(width: AppSpacing.sm),
+          ],
           Text(label, style: AppTypography.labelLarge.copyWith(color: color)),
+          if (suffixIcon != null) ...[
+            const SizedBox(width: AppSpacing.sm),
+            Icon(suffixIcon, size: 20),
+          ],
         ],
       );
     }

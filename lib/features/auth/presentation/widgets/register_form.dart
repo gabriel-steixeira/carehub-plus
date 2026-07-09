@@ -1,9 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../app/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -294,7 +292,7 @@ class _RegisterFormState extends State<RegisterForm> {
               // Divider
               Row(
                 children: [
-                  const Expanded(child: Divider()),
+                  const Expanded(child: Divider(color: AppColors.textHint)),
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.md,
@@ -304,10 +302,11 @@ class _RegisterFormState extends State<RegisterForm> {
                       style: AppTypography.labelSmall.copyWith(
                         color: AppColors.textHint,
                         letterSpacing: 1.0,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                  const Expanded(child: Divider()),
+                  const Expanded(child: Divider(color: AppColors.textHint)),
                 ],
               ),
 
@@ -328,34 +327,7 @@ class _RegisterFormState extends State<RegisterForm> {
                 },
               ),
 
-              const SizedBox(height: AppSpacing.xl),
-
-              // Back to login link
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Já tem uma conta? ',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: isLoading
-                        ? null
-                        : () {
-                            context.go(AppRoutes.login);
-                          },
-                    child: Text(
-                      'Entre',
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              const SizedBox(height: AppSpacing.sm),
             ],
           ),
         );
