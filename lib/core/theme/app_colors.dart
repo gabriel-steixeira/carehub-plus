@@ -37,6 +37,15 @@ class AppColors {
     stops: [0.0, 0.35, 0.7, 1.0],
   );
 
+  // Progress bar gradient (purple → blue → green → pink)
+  static const Color progressBlue = Color(0xFF80C4FF);
+  static const Color progressGreen = Color(0xFFA5F3A5);
+  static const Color progressPink = Color(0xFFFACFE8);
+
+  static const LinearGradient progressBarGradient = LinearGradient(
+    colors: [primary, progressBlue, progressGreen, progressPink],
+  );
+
   // TEXT
   static const Color textPrimary = Color(0xFF1A1A2E);
   static const Color textSecondary = Color(0xFF6B6B8A);

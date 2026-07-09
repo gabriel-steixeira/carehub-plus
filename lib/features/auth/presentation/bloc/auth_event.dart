@@ -28,3 +28,19 @@ class AuthGoogleSignInRequested extends AuthEvent {
 class AuthFacebookSignInRequested extends AuthEvent {
   const AuthFacebookSignInRequested();
 }
+
+/// Submitted email + password + name sign up form.
+class AuthSignUpSubmitted extends AuthEvent {
+  const AuthSignUpSubmitted({
+    required this.name,
+    required this.email,
+    required this.password,
+  });
+
+  final String name;
+  final String email;
+  final String password;
+
+  @override
+  List<Object?> get props => [name, email, password];
+}

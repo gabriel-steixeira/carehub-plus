@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 
 /// All route paths as static constants.
@@ -9,6 +10,7 @@ class AppRoutes {
 
   static const String splash = '/';
   static const String login = '/login';
+  static const String register = '/register';
   static const String home = '/home';
 }
 
@@ -26,6 +28,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.login,
         builder: (context, state) => const LoginPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.register,
+        builder: (context, state) => const RegisterPage(),
       ),
     ],
   );

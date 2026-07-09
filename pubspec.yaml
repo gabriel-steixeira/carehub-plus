@@ -20,6 +20,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.7
 
 flutter:
   uses-material-design: true
@@ -32,3 +33,11 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/images/icone_app.png"
   name: "Carehub+"
+
+flutter_native_splash:
+  color: "#EFE8FC"
+  image: assets/images/splash_transparente.png
+  android_12:
+    color: "#EFE8FC"
+    image: assets/images/splash_transparente.png
+  ios: true

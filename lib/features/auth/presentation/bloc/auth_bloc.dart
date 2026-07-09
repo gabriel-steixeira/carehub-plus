@@ -14,9 +14,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLoginSubmitted>(_onLoginSubmitted);
     on<AuthGoogleSignInRequested>(_onGoogleSignIn);
     on<AuthFacebookSignInRequested>(_onFacebookSignIn);
+    on<AuthSignUpSubmitted>(_onSignUpSubmitted);
   }
 
   final AuthRepository _repository;
+
+  Future<void> _onSignUpSubmitted(
+    AuthSignUpSubmitted event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(state.copyWith(status: AuthStatus.loading));
+    try {
+      await _repository.signUpWithEmail(
+        name: event.name,
+        email: event.email,
+        password: event.password,
+      );
+      emit(state.copyWith(status: AuthStatus.success));
+    } catch (e) {
+      emit(
+        state.copyWith(status: AuthStatus.failure, errorMessage: e.toString()),
+      );
+    }
+  }
 
   Future<void> _onLoginSubmitted(
     AuthLoginSubmitted event,

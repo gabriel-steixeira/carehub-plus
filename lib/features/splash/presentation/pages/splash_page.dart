@@ -99,7 +99,7 @@ class _SplashPageState extends State<SplashPage>
                   child: ScaleTransition(scale: _scaleUp, child: _buildLogo()),
                 ),
 
-                const Spacer(flex: 3),
+                const SizedBox(height: AppSpacing.xl),
 
                 // Progress bar
                 FadeTransition(
@@ -112,7 +112,7 @@ class _SplashPageState extends State<SplashPage>
                   ),
                 ),
 
-                const SizedBox(height: AppSpacing.xxl),
+                const Spacer(flex: 3),
               ],
             );
           },
@@ -148,9 +148,7 @@ class _SplashPageState extends State<SplashPage>
               widthFactor: _progressAnimation.value,
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, Color(0xFFFACFE8)],
-                  ),
+                  gradient: AppColors.progressBarGradient,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
                 ),
               ),

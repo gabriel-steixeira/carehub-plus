@@ -24,6 +24,23 @@ class AuthRepository {
     debugPrint('AuthRepository: signInWithEmail($email)');
   }
 
+  /// Signs up with email, password and name.
+  Future<void> signUpWithEmail({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
+    // TODO: Integrate with Firebase Auth
+    // Simulating network delay
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      throw const AppException('Todos os campos devem ser preenchidos');
+    }
+
+    debugPrint('AuthRepository: signUpWithEmail($name, $email)');
+  }
+
   /// Signs in with Google OAuth.
   Future<void> signInWithGoogle() async {
     // TODO: Integrate with Google Sign-In
