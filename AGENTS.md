@@ -13,6 +13,10 @@ CareHub Plus is a **mobile health/care app** built with Flutter + Firebase.
 ## Core Philosophy
 > **One codebase, one style, forever.** The app must look and feel architecturally identical on day 1 and day 300. Every new feature must be indistinguishable from existing code in structure, naming, and style.
 
+## Domain Concepts (Caregiver vs. Care Recipient)
+- **Caregiver (Cuidador):** The authenticated user (account owner). Has login credentials (email/password), settings, and manages one or more profiles.
+- **Care Recipient (Cuidado/Paciente):** The person or pet being cared for (e.g., Vovó Lúcia, Yuna). App features like tasks, medical logs, chat, and SOS are always scoped and associated with the selected Care Recipient, not the Caregiver.
+
 ## Absolute Rules (never break these)
 1. **Never** write business logic inside a Widget. Widgets are dumb — they render state.
 2. **Never** hardcode colors, font sizes, or spacing. Always reference `AppTheme`, `AppTypography`, or `AppSpacing`.

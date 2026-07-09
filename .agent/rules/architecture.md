@@ -71,3 +71,7 @@ lib/
 
 ## One BLoC per feature
 Never share a BLoC between unrelated features. If data is needed across features, use a Repository or a shared service layer.
+
+## Domain Scoping & Data Modeling
+1. **Caregiver (Cuidador):** Scoped globally to the app session. Represents the logged-in user.
+2. **Care Recipient (Cuidado/Paciente):** Most features (such as tasks, chat, clinical record) MUST be scoped to the *currently active/selected Care Recipient* (i.e. using a `careRecipientId`). Ensure repositories filter queries based on the active care recipient profile.
