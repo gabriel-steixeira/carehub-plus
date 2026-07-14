@@ -15,6 +15,12 @@ dependencies:
   go_router: ^14.8.1
   google_fonts: ^6.2.1
   flutter_svg: ^2.2.3
+  firebase_core: ^2.32.0
+  firebase_auth: ^4.19.0
+  cloud_firestore: ^4.17.0
+  google_sign_in: ^6.2.1
+  flutter_facebook_auth: ^6.0.4
+
 
 dev_dependencies:
   flutter_test:

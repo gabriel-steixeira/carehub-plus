@@ -1,11 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:mocktail/mocktail.dart';
 import 'package:carehub_plus/app/app.dart';
+import 'package:carehub_plus/features/auth/data/repositories/auth_repository.dart';
 import 'package:carehub_plus/features/splash/presentation/pages/splash_page.dart';
+
+class MockAuthRepository extends Mock implements AuthRepository {}
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
-    await tester.pumpWidget(const App());
+    final mockAuthRepository = MockAuthRepository();
+
+    await tester.pumpWidget(App(authRepository: mockAuthRepository));
     // Splash page should render
     expect(find.byType(SplashPage), findsOneWidget);
 

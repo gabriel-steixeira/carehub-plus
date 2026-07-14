@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "363466856130",
+    "project_id": "carehub-plus",
+    "storage_bucket": "carehub-plus.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:363466856130:android:e116cc4931a4e306a64d5b",
+        "android_client_info": {
+          "package_name": "com.carehubplus.carehub_plus"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "363466856130-ajp4dk71v8h38sikiv0nlvhhrdi32chr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.carehubplus.carehub_plus",
+            "certificate_hash": "f5b4ef04fb2e1759755124ab75b80fbd7d17c9a1"
+          }
+        },
+        {
+          "client_id": "363466856130-1f05f8r63h8fd54ddhpj6dl8pcjd7jv4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBbW65LwhXtWrqBF_vH4fa0_1Q9C4q9NdI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "363466856130-1f05f8r63h8fd54ddhpj6dl8pcjd7jv4.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "363466856130-lknu7d7tflefcnnkcudo1od44uenegsm.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.carehubplus.carehubPlus"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

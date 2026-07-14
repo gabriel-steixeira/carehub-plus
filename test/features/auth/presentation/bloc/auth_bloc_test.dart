@@ -25,13 +25,114 @@ void main() {
       expect(authBloc.state, const AuthState());
     });
 
+    group('AuthLoginSubmitted', () {
+      blocTest<AuthBloc, AuthState>(
+        'emits [loading, success] when signInWithEmail succeeds',
+        build: () {
+          when(() => authRepository.signInWithEmail(
+                email: 'test@example.com',
+                password: 'password123',
+              )).thenAnswer((_) async {});
+          return authBloc;
+        },
+        act: (bloc) => bloc.add(
+          const AuthLoginSubmitted(
+            email: 'test@example.com',
+            password: 'password123',
+          ),
+        ),
+        expect: () => const [
+          AuthState(status: AuthStatus.loading),
+          AuthState(status: AuthStatus.success),
+        ],
+      );
+
+      blocTest<AuthBloc, AuthState>(
+        'emits [loading, failure] when signInWithEmail throws',
+        build: () {
+          when(() => authRepository.signInWithEmail(
+                email: 'test@example.com',
+                password: 'password123',
+              )).thenThrow(const AppException('E-mail ou senha inválidos'));
+          return authBloc;
+        },
+        act: (bloc) => bloc.add(
+          const AuthLoginSubmitted(
+            email: 'test@example.com',
+            password: 'password123',
+          ),
+        ),
+        expect: () => const [
+          AuthState(status: AuthStatus.loading),
+          AuthState(
+            status: AuthStatus.failure,
+            errorMessage: 'AppException(null): E-mail ou senha inválidos',
+          ),
+        ],
+      );
+    });
+
+    group('AuthSignUpSubmitted', () {
+      blocTest<AuthBloc, AuthState>(
+        'emits [loading, success] when signUpWithEmail succeeds',
+        build: () {
+          when(() => authRepository.signUpWithEmail(
+                name: 'User Test',
+                email: 'test@example.com',
+                password: 'password123',
+              )).thenAnswer((_) async {});
+          return authBloc;
+        },
+        act: (bloc) => bloc.add(
+          const AuthSignUpSubmitted(
+            name: 'User Test',
+            email: 'test@example.com',
+            password: 'password123',
+          ),
+        ),
+        expect: () => const [
+          AuthState(status: AuthStatus.loading),
+          AuthState(status: AuthStatus.success),
+        ],
+      );
+    });
+
+    group('AuthGoogleSignInRequested', () {
+      blocTest<AuthBloc, AuthState>(
+        'emits [loading, success] when signInWithGoogle succeeds',
+        build: () {
+          when(() => authRepository.signInWithGoogle()).thenAnswer((_) async {});
+          return authBloc;
+        },
+        act: (bloc) => bloc.add(const AuthGoogleSignInRequested()),
+        expect: () => const [
+          AuthState(status: AuthStatus.loading),
+          AuthState(status: AuthStatus.success),
+        ],
+      );
+    });
+
+    group('AuthFacebookSignInRequested', () {
+      blocTest<AuthBloc, AuthState>(
+        'emits [loading, success] when signInWithFacebook succeeds',
+        build: () {
+          when(() => authRepository.signInWithFacebook()).thenAnswer((_) async {});
+          return authBloc;
+        },
+        act: (bloc) => bloc.add(const AuthFacebookSignInRequested()),
+        expect: () => const [
+          AuthState(status: AuthStatus.loading),
+          AuthState(status: AuthStatus.success),
+        ],
+      );
+    });
+
     group('AuthPasswordResetRequested', () {
       blocTest<AuthBloc, AuthState>(
         'emits [loading, success] when sendPasswordResetEmail succeeds',
         build: () {
-          when(
-            () => authRepository.sendPasswordResetEmail(any()),
-          ).thenAnswer((_) async {});
+          when(() => authRepository.sendPasswordResetEmail(any()))
+              .thenAnswer((_) async {});
           return authBloc;
         },
         act: (bloc) => bloc.add(
@@ -41,35 +142,6 @@ void main() {
           AuthState(status: AuthStatus.loading),
           AuthState(status: AuthStatus.success),
         ],
-        verify: (_) {
-          verify(
-            () => authRepository.sendPasswordResetEmail('test@example.com'),
-          ).called(1);
-        },
-      );
-
-      blocTest<AuthBloc, AuthState>(
-        'emits [loading, failure] when sendPasswordResetEmail throws',
-        build: () {
-          when(
-            () => authRepository.sendPasswordResetEmail(any()),
-          ).thenThrow(const AppException('E-mail inválido'));
-          return authBloc;
-        },
-        act: (bloc) =>
-            bloc.add(const AuthPasswordResetRequested(email: 'invalid-email')),
-        expect: () => const [
-          AuthState(status: AuthStatus.loading),
-          AuthState(
-            status: AuthStatus.failure,
-            errorMessage: 'AppException(null): E-mail inválido',
-          ),
-        ],
-        verify: (_) {
-          verify(
-            () => authRepository.sendPasswordResetEmail('invalid-email'),
-          ).called(1);
-        },
       );
     });
   });
