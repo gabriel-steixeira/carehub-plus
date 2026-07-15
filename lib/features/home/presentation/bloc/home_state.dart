@@ -9,6 +9,9 @@ class HomeState extends Equatable {
     this.profiles = const [],
     this.selectedProfileId,
     this.errorMessage,
+    this.isAddingProfile = false,
+    this.addProfileSuccess = false,
+    this.addProfileError,
   });
 
   final HomeStatus status;
@@ -17,12 +20,20 @@ class HomeState extends Equatable {
   final String? selectedProfileId;
   final String? errorMessage;
 
+  // Add profile sub-state
+  final bool isAddingProfile;
+  final bool addProfileSuccess;
+  final String? addProfileError;
+
   HomeState copyWith({
     HomeStatus? status,
     CaregiverModel? caregiver,
     List<CareRecipientModel>? profiles,
     String? selectedProfileId,
     String? errorMessage,
+    bool? isAddingProfile,
+    bool? addProfileSuccess,
+    String? addProfileError,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -30,6 +41,9 @@ class HomeState extends Equatable {
       profiles: profiles ?? this.profiles,
       selectedProfileId: selectedProfileId ?? this.selectedProfileId,
       errorMessage: errorMessage ?? this.errorMessage,
+      isAddingProfile: isAddingProfile ?? this.isAddingProfile,
+      addProfileSuccess: addProfileSuccess ?? this.addProfileSuccess,
+      addProfileError: addProfileError ?? this.addProfileError,
     );
   }
 
@@ -40,5 +54,8 @@ class HomeState extends Equatable {
         profiles,
         selectedProfileId,
         errorMessage,
+        isAddingProfile,
+        addProfileSuccess,
+        addProfileError,
       ];
 }

@@ -66,7 +66,7 @@ void main() {
           AuthState(status: AuthStatus.loading),
           AuthState(
             status: AuthStatus.failure,
-            errorMessage: 'AppException(null): E-mail ou senha inválidos',
+            errorMessage: 'E-mail ou senha inválidos',
           ),
         ],
       );

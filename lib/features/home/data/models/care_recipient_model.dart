@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import 'care_recipient_type.dart';
+
 /// Model representing a Care Recipient (person or pet being cared for).
 class CareRecipientModel extends Equatable {
   const CareRecipientModel({
@@ -8,13 +10,23 @@ class CareRecipientModel extends Equatable {
     this.photoUrl,
     this.unreadNotificationsCount = 0,
     this.type = 'person',
+    this.dateOfBirth,
+    this.recipientType,
   });
 
   final String id;
   final String name;
   final String? photoUrl;
   final int unreadNotificationsCount;
-  final String type; // 'person' or 'pet'
+
+  /// Legacy string type ('person' or 'pet') — kept for backwards compat.
+  final String type;
+
+  /// Typed care recipient category (child, elderly, pet, other).
+  final CareRecipientType? recipientType;
+
+  /// Optional date of birth.
+  final DateTime? dateOfBirth;
 
   /// Creates a CareRecipientModel from a JSON map.
   factory CareRecipientModel.fromJson(Map<String, dynamic> json) {
@@ -24,6 +36,12 @@ class CareRecipientModel extends Equatable {
       photoUrl: json['photoUrl'] as String?,
       unreadNotificationsCount: json['unreadNotificationsCount'] as int? ?? 0,
       type: json['type'] as String? ?? 'person',
+      recipientType: json['recipientType'] != null
+          ? CareRecipientType.fromValue(json['recipientType'] as String)
+          : null,
+      dateOfBirth: json['dateOfBirth'] != null
+          ? DateTime.tryParse(json['dateOfBirth'] as String)
+          : null,
     );
   }
 
@@ -35,6 +53,8 @@ class CareRecipientModel extends Equatable {
       'photoUrl': photoUrl,
       'unreadNotificationsCount': unreadNotificationsCount,
       'type': type,
+      'recipientType': recipientType?.value,
+      'dateOfBirth': dateOfBirth?.toIso8601String(),
     };
   }
 
@@ -45,6 +65,8 @@ class CareRecipientModel extends Equatable {
     String? photoUrl,
     int? unreadNotificationsCount,
     String? type,
+    CareRecipientType? recipientType,
+    DateTime? dateOfBirth,
   }) {
     return CareRecipientModel(
       id: id ?? this.id,
@@ -53,9 +75,19 @@ class CareRecipientModel extends Equatable {
       unreadNotificationsCount:
           unreadNotificationsCount ?? this.unreadNotificationsCount,
       type: type ?? this.type,
+      recipientType: recipientType ?? this.recipientType,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
     );
   }
 
   @override
-  List<Object?> get props => [id, name, photoUrl, unreadNotificationsCount, type];
+  List<Object?> get props => [
+        id,
+        name,
+        photoUrl,
+        unreadNotificationsCount,
+        type,
+        recipientType,
+        dateOfBirth,
+      ];
 }

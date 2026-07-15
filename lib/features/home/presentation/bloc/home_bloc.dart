@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../data/models/care_recipient_type.dart';
 import '../../data/models/caregiver_model.dart';
 import '../../data/models/care_recipient_model.dart';
 import '../../data/repositories/home_repository.dart';
@@ -14,6 +15,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         super(const HomeState()) {
     on<HomeLoadEvent>(_onLoad);
     on<HomeSelectProfileEvent>(_onSelectProfile);
+    on<HomeAddProfileEvent>(_onAddProfile);
   }
 
   final HomeRepository _repository;
@@ -44,5 +46,32 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     Emitter<HomeState> emit,
   ) {
     emit(state.copyWith(selectedProfileId: event.profileId));
+  }
+
+  Future<void> _onAddProfile(
+    HomeAddProfileEvent event,
+    Emitter<HomeState> emit,
+  ) async {
+    emit(state.copyWith(isAddingProfile: true, addProfileError: null));
+    try {
+      final newProfile = await _repository.addCareRecipient(
+        name: event.name,
+        recipientType: event.recipientType,
+        dateOfBirth: event.dateOfBirth,
+        photoUrl: event.photoUrl,
+      );
+      final updatedProfiles = List<CareRecipientModel>.from(state.profiles)
+        ..add(newProfile);
+      emit(state.copyWith(
+        profiles: updatedProfiles,
+        isAddingProfile: false,
+        addProfileSuccess: true,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isAddingProfile: false,
+        addProfileError: e.toString(),
+      ));
+    }
   }
 }

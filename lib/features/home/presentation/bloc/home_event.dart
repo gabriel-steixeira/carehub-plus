@@ -19,3 +19,20 @@ class HomeSelectProfileEvent extends HomeEvent {
   @override
   List<Object?> get props => [profileId];
 }
+
+class HomeAddProfileEvent extends HomeEvent {
+  const HomeAddProfileEvent({
+    required this.name,
+    required this.recipientType,
+    this.dateOfBirth,
+    this.photoUrl,
+  });
+
+  final String name;
+  final CareRecipientType recipientType;
+  final DateTime? dateOfBirth;
+  final String? photoUrl;
+
+  @override
+  List<Object?> get props => [name, recipientType, dateOfBirth, photoUrl];
+}

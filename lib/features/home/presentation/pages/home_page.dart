@@ -10,6 +10,7 @@ import '../../../../shared/widgets/app_loading.dart';
 import '../../data/models/care_recipient_model.dart';
 import '../../data/repositories/home_repository.dart';
 import '../bloc/home_bloc.dart';
+import '../widgets/add_profile_bottom_sheet.dart';
 
 /// Home Page — lets the Caregiver choose which Care Recipient to monitor.
 class HomePage extends StatelessWidget {
@@ -214,39 +215,41 @@ class HomeView extends StatelessWidget {
   }
 
   Widget _buildAddProfileButton() {
-    return Column(
-      children: [
-        GestureDetector(
-          onTap: () {
-            // Future Add Profile Action
-          },
-          child: Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.primaryLight.withValues(alpha: 0.7),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+    return Builder(
+      builder: (context) {
+        return Column(
+          children: [
+            GestureDetector(
+              onTap: () => AddProfileBottomSheet.show(context),
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primaryLight.withValues(alpha: 0.7),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-              ],
+                child: const Icon(Icons.add, color: Colors.white, size: 28),
+              ),
             ),
-            child: const Icon(Icons.add, color: Colors.white, size: 28),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          'Adicionar Perfil',
-          style: AppTypography.labelLarge.copyWith(
-            color: AppColors.primary,
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-        ),
-      ],
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Adicionar Perfil',
+              style: AppTypography.labelLarge.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
