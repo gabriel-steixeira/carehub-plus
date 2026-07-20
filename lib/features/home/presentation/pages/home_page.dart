@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -62,7 +64,7 @@ class HomeView extends StatelessWidget {
     return Column(
       children: [
         // 1. Header (White background)
-        _buildHeader(state),
+        _buildHeader(context, state),
 
         // 2. Body (Gradient background)
         Expanded(
@@ -123,7 +125,7 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(HomeState state) {
+  Widget _buildHeader(BuildContext context, HomeState state) {
     final caregiver = state.caregiver;
 
     return Container(
@@ -183,7 +185,7 @@ class HomeView extends StatelessWidget {
               size: 24,
             ),
             onPressed: () {
-              // Future Settings Screen
+              context.push(AppRoutes.settings);
             },
           ),
         ],
@@ -264,83 +266,89 @@ class _ProfileCard extends StatelessWidget {
     // Vovó Lúcia (or profile with notifications) has a beautiful purple border ring.
     final hasNotifications = profile.unreadNotificationsCount > 0;
 
-    return Column(
-      children: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Outer ring border
-            Container(
-              width: 110,
-              height: 110,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: hasNotifications
-                      ? AppColors.primaryLight
-                      : Colors.transparent,
-                  width: 3,
-                ),
-              ),
-              padding: const EdgeInsets.all(3),
-              child: Container(
+    return GestureDetector(
+      onTap: () {
+        context.push(AppRoutes.dashboard, extra: profile.id);
+      },
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Outer ring border
+              Container(
+                width: 110,
+                height: 110,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  image: profile.photoUrl != null
-                      ? DecorationImage(
-                          image: NetworkImage(profile.photoUrl!),
-                          fit: BoxFit.cover,
+                  border: Border.all(
+                    color: hasNotifications
+                        ? AppColors.primaryLight
+                        : Colors.transparent,
+                    width: 3,
+                  ),
+                ),
+                padding: const EdgeInsets.all(3),
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    image: profile.photoUrl != null
+                        ? DecorationImage(
+                            image: NetworkImage(profile.photoUrl!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                    color: AppColors.surfaceVariant,
+                  ),
+                  child: profile.photoUrl == null
+                      ? Icon(
+                          profile.type == 'pet'
+                              ? Icons.pets
+                              : Icons.person_outline,
+                          size: 40,
+                          color: AppColors.primary,
                         )
                       : null,
-                  color: AppColors.surfaceVariant,
                 ),
-                child: profile.photoUrl == null
-                    ? Icon(
-                        profile.type == 'pet'
-                            ? Icons.pets
-                            : Icons.person_outline,
-                        size: 40,
-                        color: AppColors.primary,
-                      )
-                    : null,
               ),
-            ),
 
-            // Notification Badge (green for 0, red for > 0)
-            Positioned(
-              top: 4,
-              right: 4,
-              child: Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: hasNotifications ? AppColors.error : AppColors.success,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '${profile.unreadNotificationsCount}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
+              // Notification Badge (green for 0, red for > 0)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color:
+                        hasNotifications ? AppColors.error : AppColors.success,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${profile.unreadNotificationsCount}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          profile.name,
-          style: AppTypography.titleLarge.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            profile.name,
+            style: AppTypography.titleLarge.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

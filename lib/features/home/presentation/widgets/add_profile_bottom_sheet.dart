@@ -53,7 +53,6 @@ class _AddProfileBottomSheetState extends State<AddProfileBottomSheet> {
       initialDate: DateTime(now.year - 30),
       firstDate: DateTime(1900),
       lastDate: now,
-      locale: const Locale('pt', 'BR'),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
