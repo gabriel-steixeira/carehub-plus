@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../home/data/models/caregiver_model.dart';
 import '../../data/repositories/settings_repository.dart';
 
 part 'settings_event.dart';
@@ -22,9 +23,11 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   ) async {
     emit(state.copyWith(status: SettingsStatus.loading));
     try {
+      final caregiver = await _repository.fetchCaregiver();
       final notifs = await _repository.fetchNotificationSettings();
       emit(state.copyWith(
         status: SettingsStatus.success,
+        caregiver: caregiver,
         notifications: notifs,
       ));
     } catch (e) {

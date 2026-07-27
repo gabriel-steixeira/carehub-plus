@@ -41,3 +41,8 @@ CareHub Plus is a **mobile health/care app** built with Flutter + Firebase.
 - go_router: ^14.x (routing)
 - freezed + json_serializable: code generation for models
 - mocktail: testing mocks
+
+## Emulator & App Execution Rules
+1. **List Emulators:** Use `flutter emulators` to view available virtual devices.
+2. **Launch CareHub Emulator:** Use `flutter emulators --launch carehub_emulator` to start the default Android emulator.
+3. **Run Application:** Use `flutter run` to build and execute the application on the active device/emulator.

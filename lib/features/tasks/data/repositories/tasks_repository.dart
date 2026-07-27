@@ -1,10 +1,17 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/task_category.dart';
 import '../models/task_frequency.dart';
 import '../models/task_model.dart';
 
-/// Repository for Tasks management.
+/// Repository for Tasks management with real Firebase Firestore integration.
 class TasksRepository {
-  final List<TaskModel> _mockTasks = [
+  TasksRepository({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseFirestore _firestore;
+
+  final List<TaskModel> _seedTasks = [
     TaskModel(
       id: 'task_1',
       careRecipientId: 'recipient_lucia',
@@ -32,13 +39,13 @@ class TasksRepository {
     TaskModel(
       id: 'task_3',
       careRecipientId: 'recipient_lucia',
-      title: 'Caminhada Leve no Praça',
+      title: 'Caminhada Leve na Praça',
       description: 'Realizar 20 minutos de caminhada monitorada.',
       scheduledTime: DateTime.now().subtract(const Duration(hours: 4)),
       category: TaskCategory.activity,
       frequency: TaskFrequency.daily,
       assignedToName: 'Maria Oliveira',
-      isCompleted: false, // Overdue
+      isCompleted: false,
     ),
     TaskModel(
       id: 'task_4',
@@ -55,42 +62,70 @@ class TasksRepository {
 
   /// Fetches tasks for a specific care recipient or all if empty.
   Future<List<TaskModel>> fetchTasks({String? careRecipientId}) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (careRecipientId == null || careRecipientId.isEmpty) {
-      return List.unmodifiable(_mockTasks);
+    try {
+      Query query = _firestore.collection('tasks');
+      if (careRecipientId != null && careRecipientId.isNotEmpty) {
+        query = query.where('careRecipientId', isEqualTo: careRecipientId);
+      }
+
+      final snapshot = await query.get();
+
+      if (snapshot.docs.isNotEmpty) {
+        return snapshot.docs
+            .map((doc) => TaskModel.fromJson(doc.data() as Map<String, dynamic>))
+            .toList();
+      }
+
+      // Seed default tasks into Firestore if collection is empty
+      for (final task in _seedTasks) {
+        await _firestore.collection('tasks').doc(task.id).set(task.toJson());
+      }
+
+      if (careRecipientId != null && careRecipientId.isNotEmpty) {
+        return _seedTasks.where((t) => t.careRecipientId == careRecipientId).toList();
+      }
+      return _seedTasks;
+    } catch (_) {
+      if (careRecipientId != null && careRecipientId.isNotEmpty) {
+        return _seedTasks.where((t) => t.careRecipientId == careRecipientId).toList();
+      }
+      return _seedTasks;
     }
-    return _mockTasks
-        .where((t) => t.careRecipientId == careRecipientId)
-        .toList();
   }
 
-  /// Adds a new task to the repository.
+  /// Adds a new task to the Firestore repository.
   Future<TaskModel> addTask(TaskModel task) async {
-    await Future.delayed(const Duration(milliseconds: 400));
-    _mockTasks.insert(0, task);
-    return task;
+    final docId = task.id.isEmpty
+        ? 'task_${DateTime.now().millisecondsSinceEpoch}'
+        : task.id;
+    final finalTask = task.copyWith(id: docId);
+
+    await _firestore.collection('tasks').doc(docId).set(finalTask.toJson());
+    return finalTask;
   }
 
   /// Toggles task completion status with optional completion note.
   Future<TaskModel> toggleTaskCompletion(String taskId, {String? note}) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    final index = _mockTasks.indexWhere((t) => t.id == taskId);
-    if (index == -1) {
+    final docRef = _firestore.collection('tasks').doc(taskId);
+    final doc = await docRef.get();
+
+    if (!doc.exists || doc.data() == null) {
       throw Exception('Tarefa não encontrada.');
     }
-    final existing = _mockTasks[index];
+
+    final existing = TaskModel.fromJson(doc.data()!);
     final updated = existing.copyWith(
       isCompleted: !existing.isCompleted,
       completedAt: !existing.isCompleted ? DateTime.now() : null,
       completionNote: !existing.isCompleted ? note : null,
     );
-    _mockTasks[index] = updated;
+
+    await docRef.update(updated.toJson());
     return updated;
   }
 
-  /// Deletes a task by ID.
+  /// Deletes a task by ID from Firestore.
   Future<void> deleteTask(String taskId) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _mockTasks.removeWhere((t) => t.id == taskId);
+    await _firestore.collection('tasks').doc(taskId).delete();
   }
 }

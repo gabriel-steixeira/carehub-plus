@@ -318,7 +318,7 @@ class _DatePickerField extends StatelessWidget {
   final VoidCallback onTap;
 
   String get _label {
-    if (selectedDate == null) return 'mm/dd/aaaa';
+    if (selectedDate == null) return 'dd/mm/aaaa';
     return '${selectedDate!.day.toString().padLeft(2, '0')}/'
         '${selectedDate!.month.toString().padLeft(2, '0')}/'
         '${selectedDate!.year}';

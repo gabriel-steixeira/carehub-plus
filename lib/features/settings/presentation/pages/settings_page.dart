@@ -78,11 +78,14 @@ class SettingsView extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        const CircleAvatar(
+                        CircleAvatar(
                           radius: 30,
-                          backgroundImage: NetworkImage(
-                            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150',
-                          ),
+                          backgroundImage: state.caregiver?.photoUrl != null &&
+                                  state.caregiver!.photoUrl!.isNotEmpty
+                              ? NetworkImage(state.caregiver!.photoUrl!)
+                              : const NetworkImage(
+                                  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150',
+                                ),
                         ),
                         const SizedBox(width: AppSpacing.md),
                         Expanded(
@@ -90,14 +93,14 @@ class SettingsView extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Maria Oliveira',
+                                state.caregiver?.name ?? 'Cuidador',
                                 style: AppTypography.titleLarge.copyWith(
                                   color: AppColors.textPrimary,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               Text(
-                                'maria@carehub.com',
+                                state.caregiver?.email ?? '',
                                 style: AppTypography.labelSmall.copyWith(
                                   color: AppColors.textSecondary,
                                 ),

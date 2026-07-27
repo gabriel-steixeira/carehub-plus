@@ -9,6 +9,8 @@ class MockAuthRepository extends Mock implements AuthRepository {}
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
     final mockAuthRepository = MockAuthRepository();
+    when(() => mockAuthRepository.authStateChanges)
+        .thenAnswer((_) => Stream.value(null));
 
     await tester.pumpWidget(App(authRepository: mockAuthRepository));
     // Splash page should render

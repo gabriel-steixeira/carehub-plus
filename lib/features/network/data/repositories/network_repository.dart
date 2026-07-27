@@ -1,8 +1,15 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/network_member_model.dart';
 
-/// Repository for managing the Support Network.
+/// Repository for managing the Support Network with real Firebase Firestore integration.
 class NetworkRepository {
-  final List<NetworkMemberModel> _mockMembers = [
+  NetworkRepository({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseFirestore _firestore;
+
+  final List<NetworkMemberModel> _seedMembers = [
     const NetworkMemberModel(
       id: 'mem_1',
       name: 'Patrícia Cuidadora',
@@ -33,18 +40,36 @@ class NetworkRepository {
   ];
 
   Future<List<NetworkMemberModel>> fetchMembers() async {
-    await Future.delayed(const Duration(milliseconds: 400));
-    return List.unmodifiable(_mockMembers);
+    try {
+      final snapshot = await _firestore.collection('network_members').get();
+      if (snapshot.docs.isNotEmpty) {
+        return snapshot.docs
+            .map((doc) => NetworkMemberModel.fromJson(doc.data()))
+            .toList();
+      }
+
+      // Seed default members
+      for (final m in _seedMembers) {
+        await _firestore.collection('network_members').doc(m.id).set(m.toJson());
+      }
+      return _seedMembers;
+    } catch (_) {
+      return _seedMembers;
+    }
   }
 
   Future<NetworkMemberModel> addMember(NetworkMemberModel member) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _mockMembers.add(member);
-    return member;
+    final docId = member.id.isEmpty
+        ? 'mem_${DateTime.now().millisecondsSinceEpoch}'
+        : member.id;
+    final data = member.toJson();
+    data['id'] = docId;
+
+    await _firestore.collection('network_members').doc(docId).set(data);
+    return NetworkMemberModel.fromJson(data);
   }
 
   Future<void> removeMember(String memberId) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _mockMembers.removeWhere((m) => m.id == memberId);
+    await _firestore.collection('network_members').doc(memberId).delete();
   }
 }

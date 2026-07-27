@@ -195,7 +195,37 @@ class HomeView extends StatelessWidget {
 
   Widget _buildProfilesCarousel(List<CareRecipientModel> profiles) {
     if (profiles.isEmpty) {
-      return const SizedBox.shrink();
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant.withValues(alpha: 0.5),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.people_outline_rounded,
+              size: 48,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Nenhum perfil cadastrado',
+            style: AppTypography.titleMedium.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Cadastre o primeiro assistido ou pet abaixo.',
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      );
     }
 
     return SingleChildScrollView(
@@ -228,7 +258,9 @@ class HomeView extends StatelessWidget {
                 height: 56,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.primaryLight.withValues(alpha: 0.7),
+                  color: AppColors.primaryLight, //.withValues(alpha: 0.7),
+                  // -> só ficará com essa cor em caso de estar desativado,
+                  // isso depois será pensado pelos planos dos aplicativos para controlarmos as funcionalidades e suas limitações
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.primary.withValues(alpha: 0.15),
@@ -320,8 +352,9 @@ class _ProfileCard extends StatelessWidget {
                   width: 20,
                   height: 20,
                   decoration: BoxDecoration(
-                    color:
-                        hasNotifications ? AppColors.error : AppColors.success,
+                    color: hasNotifications
+                        ? AppColors.error
+                        : AppColors.success,
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 1.5),
                   ),

@@ -1,0 +1,32 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Coleção de Cuidadores (Perfil do usuário autenticado)
+    match /caregivers/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 2. Coleção de Assistidos e Pets (Care Recipients)
+    match /care_recipients/{recipientId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // 3. Coleção de Tarefas e Lembretes
+    match /tasks/{taskId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // 4. Coleção da Rede de Apoio
+    match /network_members/{memberId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // 5. Coleções de Chat e Mensagens da Equipe
+    match /chat_rooms/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+  }
+}

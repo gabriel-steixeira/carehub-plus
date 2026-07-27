@@ -1,9 +1,21 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../models/chat_message_model.dart';
 import '../models/chat_room_model.dart';
 
-/// Repository for Chat functionality across support network members.
+/// Repository for Chat functionality with real Firebase Firestore integration.
 class ChatRepository {
-  final List<ChatRoomModel> _mockRooms = [
+  ChatRepository({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _auth = auth ?? FirebaseAuth.instance;
+
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
+
+  final List<ChatRoomModel> _seedRooms = [
     ChatRoomModel(
       id: 'room_1',
       title: 'Rede de Apoio — Vovó Lúcia',
@@ -33,44 +45,45 @@ class ChatRepository {
     ),
   ];
 
-  final Map<String, List<ChatMessageModel>> _mockMessages = {
-    'room_1': [
-      ChatMessageModel(
-        id: 'msg_1',
-        senderId: 'user_patricia',
-        senderName: 'Patrícia (Cuidadora)',
-        text: 'Bom dia! Vovó Lúcia acordou bem disposta hoje.',
-        timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-        isMe: false,
-      ),
-      ChatMessageModel(
-        id: 'msg_2',
-        senderId: 'user_me',
-        senderName: 'Você',
-        text: 'Ótimo noticia! Ela tomou a medicação matinal?',
-        timestamp: DateTime.now().subtract(const Duration(hours: 1)),
-        isMe: true,
-      ),
-      ChatMessageModel(
-        id: 'msg_3',
-        senderId: 'user_patricia',
-        senderName: 'Patrícia (Cuidadora)',
-        text: 'Sim, medicação de pressão administrada às 08h. Pressão 12/8.',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 12)),
-        isMe: false,
-        type: ChatMessageType.medicalNote,
-      ),
-    ],
-  };
-
   Future<List<ChatRoomModel>> fetchChatRooms() async {
-    await Future.delayed(const Duration(milliseconds: 400));
-    return List.unmodifiable(_mockRooms);
+    try {
+      final snapshot = await _firestore.collection('chat_rooms').get();
+      if (snapshot.docs.isNotEmpty) {
+        return snapshot.docs
+            .map((doc) => ChatRoomModel.fromJson(doc.data()))
+            .toList();
+      }
+
+      // Seed initial rooms
+      for (final room in _seedRooms) {
+        await _firestore.collection('chat_rooms').doc(room.id).set(room.toJson());
+      }
+      return _seedRooms;
+    } catch (_) {
+      return _seedRooms;
+    }
   }
 
   Future<List<ChatMessageModel>> fetchMessages(String roomId) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    return _mockMessages[roomId] ?? [];
+    final uid = _auth.currentUser?.uid ?? 'user_me';
+    try {
+      final snapshot = await _firestore
+          .collection('chat_rooms')
+          .doc(roomId)
+          .collection('messages')
+          .orderBy('timestamp', descending: false)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        return snapshot.docs
+            .map((doc) => ChatMessageModel.fromJson(doc.data(), uid))
+            .toList();
+      }
+
+      return [];
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<ChatMessageModel> sendMessage(
@@ -78,22 +91,34 @@ class ChatRepository {
     String text, {
     ChatMessageType type = ChatMessageType.text,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 200));
+    final user = _auth.currentUser;
+    final uid = user?.uid ?? 'user_me';
+    final name = user?.displayName ?? 'Você';
+    final msgId = 'msg_${DateTime.now().millisecondsSinceEpoch}';
 
     final newMsg = ChatMessageModel(
-      id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
-      senderId: 'user_me',
-      senderName: 'Você',
+      id: msgId,
+      senderId: uid,
+      senderName: name,
       text: text,
       timestamp: DateTime.now(),
       isMe: true,
       type: type,
     );
 
-    if (!_mockMessages.containsKey(roomId)) {
-      _mockMessages[roomId] = [];
-    }
-    _mockMessages[roomId]!.add(newMsg);
+    try {
+      await _firestore
+          .collection('chat_rooms')
+          .doc(roomId)
+          .collection('messages')
+          .doc(msgId)
+          .set(newMsg.toJson());
+
+      await _firestore.collection('chat_rooms').doc(roomId).update({
+        'lastMessage': text,
+        'lastMessageTime': DateTime.now().toIso8601String(),
+      });
+    } catch (_) {}
 
     return newMsg;
   }

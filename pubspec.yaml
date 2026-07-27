@@ -20,6 +20,7 @@ dependencies:
   cloud_firestore: ^4.17.0
   google_sign_in: ^6.2.1
   flutter_facebook_auth: ^6.0.4
+  url_launcher: ^6.3.0
 
 
 dev_dependencies:
@@ -41,7 +42,7 @@ flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/images/icone_app.png"
-  name: "Carehub+"
+  name: "CareHub +"
 
 flutter_native_splash:
   color: "#EFE8FC"

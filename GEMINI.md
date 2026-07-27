@@ -22,6 +22,12 @@ Use the appropriate workflow file when the user says:
 - "revisa o PR" / "code review" → `.agent/workflows/code-review.md`
 - "gera testes" / "generate tests" → `.agent/workflows/generate-tests.md`
 - "sincroniza o design" / "sync figma" → `.agent/workflows/sync-design.md`
+- "roda o app" / "iniciar emulador" / "testar app" → `.agent/workflows/run-app.md`
+
+## Flutter Emulator & Testing Commands
+- List available emulators: `flutter emulators`
+- Launch CareHub emulator: `flutter emulators --launch carehub_emulator`
+- Run application code: `flutter run`
 
 ## Implementation Artifacts
 For complex features, generate these files in the project root (delete after task):

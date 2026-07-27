@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -136,17 +137,26 @@ class SosView extends StatelessWidget {
                   ...state.contacts.map((contact) {
                     return EmergencyContactTile(
                       contact: contact,
-                      onCall: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Iniciando chamada para ${contact.name} (${contact.phone})...',
-                              style: AppTypography.bodyMedium
-                                  .copyWith(color: Colors.white),
-                            ),
-                            backgroundColor: AppColors.primary,
-                          ),
-                        );
+                      onCall: () async {
+                        final cleanPhone =
+                            contact.phone.replaceAll(RegExp(r'[^\d+]'), '');
+                        final Uri uri = Uri.parse('tel:$cleanPhone');
+                        try {
+                          await launchUrl(uri);
+                        } catch (_) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Iniciando chamada para ${contact.name} (${contact.phone})...',
+                                  style: AppTypography.bodyMedium
+                                      .copyWith(color: Colors.white),
+                                ),
+                                backgroundColor: AppColors.primary,
+                              ),
+                            );
+                          }
+                        }
                       },
                     );
                   }),

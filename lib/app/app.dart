@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../core/auth/session_listener.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/data/repositories/auth_repository.dart';
 import 'router/app_router.dart';
@@ -20,6 +21,9 @@ class App extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         routerConfig: AppRouter.router,
+        builder: (context, child) => SessionListener(
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
     );
   }

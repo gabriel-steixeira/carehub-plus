@@ -17,6 +17,9 @@ class AuthRepository {
   final AuthService _authService;
   final FirebaseFirestore _firestore;
 
+  /// Stream of authentication state changes.
+  Stream<User?> get authStateChanges => _authService.authStateChanges;
+
   /// Map Firebase exception codes to domain failures.
   AppException _mapFirebaseException(FirebaseAuthException e) {
     switch (e.code) {
