@@ -1,6 +1,9 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../home/data/models/care_recipient_model.dart';
+import '../../../home/data/models/caregiver_model.dart';
+import '../../../home/data/repositories/home_repository.dart';
 import '../../data/models/task_category.dart';
 import '../../data/models/task_frequency.dart';
 import '../../data/models/task_model.dart';
@@ -10,18 +13,26 @@ part 'tasks_event.dart';
 part 'tasks_state.dart';
 
 class TasksBloc extends Bloc<TasksEvent, TasksState> {
-  TasksBloc({required TasksRepository repository})
-      : _repository = repository,
-        super(const TasksState()) {
+  TasksBloc({
+    required TasksRepository repository,
+    HomeRepository? homeRepository,
+  })  : _repository = repository,
+        _homeRepository = homeRepository ?? HomeRepository(),
+        super(TasksState(selectedDate: DateTime.now())) {
     on<TasksLoadEvent>(_onLoad);
     on<TasksFilterChangedEvent>(_onFilterChanged);
     on<TasksCategoryFilterChangedEvent>(_onCategoryFilterChanged);
+    on<TasksProfileChangedEvent>(_onProfileChanged);
+    on<TasksSearchQueryChangedEvent>(_onSearchQueryChanged);
+    on<TasksDateChangedEvent>(_onDateChanged);
+    on<TasksSortChangedEvent>(_onSortChanged);
     on<TaskCreateEvent>(_onCreateTask);
     on<TaskToggleCompletionEvent>(_onToggleCompletion);
     on<TaskDeleteEvent>(_onDeleteTask);
   }
 
   final TasksRepository _repository;
+  final HomeRepository _homeRepository;
 
   Future<void> _onLoad(
     TasksLoadEvent event,
@@ -29,13 +40,17 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
   ) async {
     emit(state.copyWith(status: TasksStatus.loading));
     try {
-      final tasks = await _repository.fetchTasks(
-        careRecipientId: event.careRecipientId,
-      );
+      final caregiver = await _homeRepository.fetchCaregiver();
+      final profiles = await _homeRepository.fetchCareRecipients();
+      final tasks = await _repository.fetchTasks();
+
       emit(state.copyWith(
         status: TasksStatus.success,
+        caregiver: caregiver,
+        profiles: profiles,
         tasks: tasks,
         careRecipientId: event.careRecipientId,
+        selectedProfileId: event.careRecipientId ?? 'all',
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -57,6 +72,34 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     Emitter<TasksState> emit,
   ) {
     emit(state.copyWith(selectedCategory: event.category));
+  }
+
+  void _onProfileChanged(
+    TasksProfileChangedEvent event,
+    Emitter<TasksState> emit,
+  ) {
+    emit(state.copyWith(selectedProfileId: event.profileId));
+  }
+
+  void _onSearchQueryChanged(
+    TasksSearchQueryChangedEvent event,
+    Emitter<TasksState> emit,
+  ) {
+    emit(state.copyWith(searchQuery: event.query));
+  }
+
+  void _onDateChanged(
+    TasksDateChangedEvent event,
+    Emitter<TasksState> emit,
+  ) {
+    emit(state.copyWith(selectedDate: event.selectedDate));
+  }
+
+  void _onSortChanged(
+    TasksSortChangedEvent event,
+    Emitter<TasksState> emit,
+  ) {
+    emit(state.copyWith(sortOption: event.sortOption));
   }
 
   Future<void> _onCreateTask(
@@ -117,7 +160,8 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
   ) async {
     try {
       await _repository.deleteTask(event.taskId);
-      final updatedList = state.tasks.where((t) => t.id != event.taskId).toList();
+      final updatedList =
+          state.tasks.where((t) => t.id != event.taskId).toList();
       emit(state.copyWith(tasks: updatedList));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));

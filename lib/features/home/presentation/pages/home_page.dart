@@ -8,6 +8,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
 import '../../../../shared/widgets/app_error_view.dart';
+import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../data/models/care_recipient_model.dart';
 import '../../data/repositories/home_repository.dart';
@@ -64,7 +65,7 @@ class HomeView extends StatelessWidget {
     return Column(
       children: [
         // 1. Header (White background)
-        _buildHeader(context, state),
+        AppHeader(photoUrl: state.caregiver?.photoUrl),
 
         // 2. Body (Gradient background)
         Expanded(
@@ -122,74 +123,6 @@ class HomeView extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, HomeState state) {
-    final caregiver = state.caregiver;
-
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.only(
-        left: AppSpacing.md,
-        right: AppSpacing.md,
-        top: AppSpacing.xl + AppSpacing.sm,
-        bottom: AppSpacing.sm,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Left side: Caregiver avatar and small logo
-          Row(
-            children: [
-              // Caregiver Avatar
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
-                backgroundImage: caregiver?.photoUrl != null
-                    ? NetworkImage(caregiver!.photoUrl!)
-                    : null,
-                child: caregiver?.photoUrl == null
-                    ? const Icon(
-                        Icons.person,
-                        size: 20,
-                        color: AppColors.primary,
-                      )
-                    : null,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-
-              // Logo Pequeno
-              Image.asset(
-                'assets/images/logo_pequeno.png',
-                height: 28,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return Text(
-                    'CareHub+',
-                    style: AppTypography.titleLarge.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-
-          // Right side: Settings gear
-          IconButton(
-            icon: const Icon(
-              Icons.settings_outlined,
-              color: AppColors.textSecondary,
-              size: 24,
-            ),
-            onPressed: () {
-              context.push(AppRoutes.settings);
-            },
-          ),
-        ],
-      ),
     );
   }
 

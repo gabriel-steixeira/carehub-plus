@@ -34,6 +34,42 @@ class TasksCategoryFilterChangedEvent extends TasksEvent {
   List<Object?> get props => [category];
 }
 
+class TasksProfileChangedEvent extends TasksEvent {
+  const TasksProfileChangedEvent({required this.profileId});
+
+  final String profileId;
+
+  @override
+  List<Object?> get props => [profileId];
+}
+
+class TasksSearchQueryChangedEvent extends TasksEvent {
+  const TasksSearchQueryChangedEvent({required this.query});
+
+  final String query;
+
+  @override
+  List<Object?> get props => [query];
+}
+
+class TasksDateChangedEvent extends TasksEvent {
+  const TasksDateChangedEvent({required this.selectedDate});
+
+  final DateTime selectedDate;
+
+  @override
+  List<Object?> get props => [selectedDate];
+}
+
+class TasksSortChangedEvent extends TasksEvent {
+  const TasksSortChangedEvent({required this.sortOption});
+
+  final String sortOption;
+
+  @override
+  List<Object?> get props => [sortOption];
+}
+
 class TaskCreateEvent extends TasksEvent {
   const TaskCreateEvent({
     required this.careRecipientId,

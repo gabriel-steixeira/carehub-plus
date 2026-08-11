@@ -8,6 +8,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
 import '../../../../shared/widgets/app_error_view.dart';
+import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../../home/data/models/care_recipient_model.dart';
 import '../../data/models/dashboard_summary_model.dart';
@@ -60,222 +61,179 @@ class DashboardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: BlocBuilder<DashboardBloc, DashboardState>(
-          builder: (context, state) {
-            if (state.status == DashboardStatus.loading &&
-                state.summary == null) {
-              return const AppLoading();
-            }
+      backgroundColor: Colors.white, // Header area background
+      body: BlocBuilder<DashboardBloc, DashboardState>(
+        builder: (context, state) {
+          if (state.status == DashboardStatus.loading &&
+              state.summary == null) {
+            return const AppLoading();
+          }
 
-            if (state.status == DashboardStatus.failure &&
-                state.summary == null) {
-              return AppErrorView(
-                message: state.errorMessage ??
-                    'Erro ao carregar o painel de controle.',
-                onRetry: () {
-                  context.read<DashboardBloc>().add(
-                        DashboardLoadEvent(
-                          selectedProfileId: state.selectedProfileId,
-                        ),
-                      );
-                },
-              );
-            }
+          if (state.status == DashboardStatus.failure &&
+              state.summary == null) {
+            return AppErrorView(
+              message: state.errorMessage ??
+                  'Erro ao carregar o painel de controle.',
+              onRetry: () {
+                context.read<DashboardBloc>().add(
+                      DashboardLoadEvent(
+                        selectedProfileId: state.selectedProfileId,
+                      ),
+                    );
+              },
+            );
+          }
 
-            final activeProfile = state.selectedProfile;
-            final summary = state.summary;
+          final activeProfile = state.selectedProfile;
+          final summary = state.summary;
 
-            return Column(
-              children: [
-                // Top App Bar Header
-                _buildHeader(context, state),
-                const SizedBox(height: AppSpacing.sm),
+          return Column(
+            children: [
+              // Top App Bar Header (Same as Home)
+              AppHeader(photoUrl: state.caregiver?.photoUrl),
 
-                // Profile Filter Chips
-                ProfileChipFilter(
-                  profiles: state.profiles,
-                  selectedProfileId: state.selectedProfileId,
-                  onProfileSelected: (profileId) {
-                    context
-                        .read<DashboardBloc>()
-                        .add(DashboardSelectProfileEvent(profileId: profileId));
-                  },
-                ),
-
-                const SizedBox(height: AppSpacing.sm),
-
-                // Main Dashboard Body
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.all(AppSpacing.md),
+              // Main Dashboard Body (Gradient background)
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.splashGradient,
+                  ),
+                  child: SafeArea(
+                    top: false,
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Search Bar
-                        _buildSearchBar(context),
-                        const SizedBox(height: AppSpacing.lg),
-
-                        // Active Profile Banner Info
-                        if (activeProfile != null) ...[
-                          _buildProfileBanner(activeProfile),
-                          const SizedBox(height: AppSpacing.lg),
-                        ],
-
-                        // KPIs Grid (2x2)
-                        Text(
-                          'Resumo Diário',
-                          style: AppTypography.titleLarge.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
                         const SizedBox(height: AppSpacing.sm),
-                        _buildKpiGrid(context, summary),
-                        const SizedBox(height: AppSpacing.xl),
 
-                        // Cora Suggestions Section
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Sugestões da Cora IA',
-                              style: AppTypography.titleLarge.copyWith(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () =>
-                                  context.push(AppRoutes.coraChat),
-                              child: Text(
-                                'Falar com Cora',
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-
-                        if (summary != null &&
-                            summary.suggestions.isNotEmpty) ...[
-                          SizedBox(
-                            height: 175,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: summary.suggestions.length,
-                              itemBuilder: (context, index) {
-                                final sug = summary.suggestions[index];
-                                return SuggestionCard(
-                                  suggestion: sug,
-                                  onActionTap: () {
-                                    context.push(AppRoutes.coraChat);
-                                  },
+                        // Profile Filter Chips
+                        ProfileChipFilter(
+                          profiles: state.profiles,
+                          selectedProfileId: state.selectedProfileId,
+                          onProfileSelected: (profileId) {
+                            context.read<DashboardBloc>().add(
+                                  DashboardSelectProfileEvent(
+                                    profileId: profileId,
+                                  ),
                                 );
-                              },
-                            ),
-                          ),
-                        ] else ...[
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(AppSpacing.md),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius:
-                                  BorderRadius.circular(AppSpacing.radiusMd),
-                            ),
-                            child: Text(
-                              'Nenhuma sugestão no momento. Tudo tranquilo por aqui!',
-                              style: AppTypography.bodyMedium.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ],
+                          },
+                        ),
 
-                        const SizedBox(height: AppSpacing.xl),
+                        const SizedBox(height: AppSpacing.sm),
+
+                        // Scrollable Content
+                        Expanded(
+                          child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Search Bar
+                                _buildSearchBar(context),
+                                const SizedBox(height: AppSpacing.lg),
+
+                                // Active Profile Banner Info
+                                if (activeProfile != null) ...[
+                                  _buildProfileBanner(activeProfile),
+                                  const SizedBox(height: AppSpacing.lg),
+                                ],
+
+                                // KPIs Grid (2x2)
+                                Text(
+                                  'Resumo Diário',
+                                  style: AppTypography.titleLarge.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                _buildKpiGrid(context, summary),
+                                const SizedBox(height: AppSpacing.xl),
+
+                                // Cora Suggestions Section
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Sugestões da Cora IA',
+                                      style: AppTypography.titleLarge.copyWith(
+                                        color: AppColors.textPrimary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () =>
+                                          context.push(AppRoutes.coraChat),
+                                      child: Text(
+                                        'Falar com Cora',
+                                        style: AppTypography.labelSmall
+                                            .copyWith(
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: AppSpacing.xs),
+
+                                if (summary != null &&
+                                    summary.suggestions.isNotEmpty) ...[
+                                  SizedBox(
+                                    height: 175,
+                                    child: ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      physics: const BouncingScrollPhysics(),
+                                      itemCount: summary.suggestions.length,
+                                      itemBuilder: (context, index) {
+                                        final sug = summary.suggestions[index];
+                                        return SuggestionCard(
+                                          suggestion: sug,
+                                          onActionTap: () {
+                                            context.push(AppRoutes.coraChat);
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ] else ...[
+                                  Container(
+                                    width: double.infinity,
+                                    padding:
+                                        const EdgeInsets.all(AppSpacing.md),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surface,
+                                      borderRadius: BorderRadius.circular(
+                                        AppSpacing.radiusMd,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Nenhuma sugestão no momento. Tudo tranquilo por aqui!',
+                                      style: AppTypography.bodyMedium.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+
+                                const SizedBox(height: AppSpacing.xl),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ),
-              ],
-            );
-          },
-        ),
+              ),
+            ],
+          );
+        },
       ),
       bottomNavigationBar: AppBottomNavigation(
         currentIndex: 0,
         onTap: (index) => _onBottomNavTap(context, index),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, DashboardState state) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      color: Colors.white,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: AppColors.surfaceVariant,
-                backgroundImage: state.caregiver?.photoUrl != null
-                    ? NetworkImage(state.caregiver!.photoUrl!)
-                    : null,
-                child: state.caregiver?.photoUrl == null
-                    ? const Icon(Icons.person, color: AppColors.primary)
-                    : null,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Olá, ${state.caregiver?.name.split(' ').first ?? 'Cuidador'}',
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    'CareHub Plus',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.auto_awesome, color: AppColors.primary),
-                tooltip: 'Cora Assistant',
-                onPressed: () => context.push(AppRoutes.coraChat),
-              ),
-              IconButton(
-                icon: const Icon(Icons.settings_outlined,
-                    color: AppColors.textSecondary),
-                tooltip: 'Configurações',
-                onPressed: () => context.push(AppRoutes.settings),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
