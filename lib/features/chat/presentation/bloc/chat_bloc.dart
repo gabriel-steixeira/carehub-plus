@@ -10,9 +10,13 @@ part 'chat_state.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ChatBloc({required ChatRepository repository})
-      : _repository = repository,
-        super(const ChatState()) {
+    : _repository = repository,
+      super(const ChatState()) {
     on<ChatLoadRoomsEvent>(_onLoadRooms);
+    on<ChatSearchQueryChangedEvent>(_onSearchQueryChanged);
+    on<ChatProfileChangedEvent>(_onProfileChanged);
+    on<ChatCategoryChangedEvent>(_onCategoryChanged);
+    on<ChatSortChangedEvent>(_onSortChanged);
     on<ChatOpenRoomEvent>(_onOpenRoom);
     on<ChatSendMessageEvent>(_onSendMessage);
   }
@@ -28,26 +32,61 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final rooms = await _repository.fetchChatRooms();
       emit(state.copyWith(status: ChatStatus.success, rooms: rooms));
     } catch (e) {
-      emit(state.copyWith(
-        status: ChatStatus.failure,
-        errorMessage: e.toString(),
-      ));
+      emit(
+        state.copyWith(status: ChatStatus.failure, errorMessage: e.toString()),
+      );
     }
+  }
+
+  void _onSearchQueryChanged(
+    ChatSearchQueryChangedEvent event,
+    Emitter<ChatState> emit,
+  ) {
+    emit(state.copyWith(searchQuery: event.query));
+  }
+
+  void _onProfileChanged(
+    ChatProfileChangedEvent event,
+    Emitter<ChatState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        selectedProfileName: event.profileName,
+        clearSelectedProfile: event.profileName == null,
+      ),
+    );
+  }
+
+  void _onCategoryChanged(
+    ChatCategoryChangedEvent event,
+    Emitter<ChatState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        selectedCategory: event.category,
+        clearSelectedCategory: event.category == null,
+      ),
+    );
+  }
+
+  void _onSortChanged(ChatSortChangedEvent event, Emitter<ChatState> emit) {
+    emit(state.copyWith(sortOption: event.sortOption));
   }
 
   Future<void> _onOpenRoom(
     ChatOpenRoomEvent event,
     Emitter<ChatState> emit,
   ) async {
-    emit(state.copyWith(activeRoomId: event.roomId, status: ChatStatus.loading));
+    emit(
+      state.copyWith(activeRoomId: event.roomId, status: ChatStatus.loading),
+    );
     try {
       final messages = await _repository.fetchMessages(event.roomId);
       emit(state.copyWith(status: ChatStatus.success, messages: messages));
     } catch (e) {
-      emit(state.copyWith(
-        status: ChatStatus.failure,
-        errorMessage: e.toString(),
-      ));
+      emit(
+        state.copyWith(status: ChatStatus.failure, errorMessage: e.toString()),
+      );
     }
   }
 
@@ -64,18 +103,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         event.text.trim(),
         type: event.type,
       );
+      final updatedMessages = List<ChatMessageModel>.from(state.messages)
+        ..add(newMsg);
 
-      final updatedMessages = List<ChatMessageModel>.from(state.messages)..add(newMsg);
-
-      emit(state.copyWith(
-        messages: updatedMessages,
-        isSending: false,
-      ));
+      emit(state.copyWith(messages: updatedMessages, isSending: false));
     } catch (e) {
-      emit(state.copyWith(
-        isSending: false,
-        errorMessage: e.toString(),
-      ));
+      emit(state.copyWith(isSending: false, errorMessage: e.toString()));
     }
   }
 }
