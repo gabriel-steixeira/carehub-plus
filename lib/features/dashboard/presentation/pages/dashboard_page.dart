@@ -10,6 +10,7 @@ import '../../../../shared/widgets/app_bottom_navigation.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_loading.dart';
+import '../../../../shared/widgets/app_search_field.dart';
 import '../../../home/data/models/care_recipient_model.dart';
 import '../../data/models/dashboard_summary_model.dart';
 import '../../data/repositories/dashboard_repository.dart';
@@ -239,31 +240,13 @@ class DashboardView extends StatelessWidget {
   }
 
   Widget _buildSearchBar(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: TextField(
-        onChanged: (query) {
-          context
-              .read<DashboardBloc>()
-              .add(DashboardSearchQueryChangedEvent(query: query));
-        },
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          hintText: 'Buscar tarefas, lembretes ou cuidados...',
-          hintStyle: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textHint,
-          ),
-          icon: const Icon(Icons.search, color: AppColors.textHint),
-        ),
-      ),
+    return AppSearchField(
+      hintText: 'Buscar tarefas, lembretes ou cuidados...',
+      onChanged: (query) {
+        context
+            .read<DashboardBloc>()
+            .add(DashboardSearchQueryChangedEvent(query: query));
+      },
     );
   }
 
