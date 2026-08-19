@@ -10,6 +10,7 @@ import '../../../../shared/widgets/app_bottom_navigation.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_loading.dart';
+import '../../../../shared/widgets/app_search_field.dart';
 import '../../../home/presentation/widgets/add_profile_bottom_sheet.dart';
 import '../../data/models/task_category.dart';
 import '../../data/repositories/tasks_repository.dart';
@@ -372,36 +373,14 @@ class _TasksViewState extends State<TasksView> {
 
   /// Search Bar
   Widget _buildSearchBar(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: _searchController,
-        onChanged: (query) {
-          context
-              .read<TasksBloc>()
-              .add(TasksSearchQueryChangedEvent(query: query));
-        },
-        decoration: InputDecoration(
-          icon: const Icon(Icons.search, color: AppColors.textSecondary),
-          hintText: 'Buscar tarefas...',
-          hintStyle: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
-          ),
-          border: InputBorder.none,
-        ),
-      ),
+    return AppSearchField(
+      hintText: 'Buscar tarefas...',
+      controller: _searchController,
+      onChanged: (query) {
+        context
+            .read<TasksBloc>()
+            .add(TasksSearchQueryChangedEvent(query: query));
+      },
     );
   }
 
