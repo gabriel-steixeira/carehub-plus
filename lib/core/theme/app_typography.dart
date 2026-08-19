@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 class AppTypography {
   AppTypography._();
 
-  static String get _fontFamily => GoogleFonts.inter().fontFamily!;
+  static String get _fontFamily => GoogleFonts.inter().fontFamily ?? 'Inter';
 
   // Display
   static TextStyle get displayLarge => TextStyle(

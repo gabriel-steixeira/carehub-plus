@@ -47,6 +47,11 @@ class AppColors {
   static const Color textHint = Color(0xFFB0B0C8);
   static const Color textInverse = Color(0xFFFFFFFF);
 
+  // SEARCH
+  static const Color searchText = Color(0xFF6B7280);
+  static const Color searchIcon = Color(0xFF94A3B8);
+  static const Color searchBorder = Color(0xFFE2E8F0);
+
   // FEEDBACK
   static const Color success = Color(0xFF437A22);
   static const Color error = Color(0xFFD32F2F);
