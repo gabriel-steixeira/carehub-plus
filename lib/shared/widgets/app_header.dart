@@ -12,6 +12,8 @@ class AppHeader extends StatelessWidget {
     super.key,
     this.photoUrl,
     this.onSettingsPressed,
+    this.showProfile = true,
+    this.showSettings = true,
   });
 
   /// URL of the caregiver's profile photo.
@@ -19,6 +21,12 @@ class AppHeader extends StatelessWidget {
 
   /// Callback when settings button is pressed. Defaults to navigating to settings route.
   final VoidCallback? onSettingsPressed;
+
+  /// Whether the caregiver profile avatar is visible.
+  final bool showProfile;
+
+  /// Whether the settings button is visible.
+  final bool showSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -33,24 +41,28 @@ class AppHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Left side: Caregiver avatar and small logo
           Row(
             children: [
-              // Caregiver Avatar
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
-                backgroundImage:
-                    photoUrl != null ? NetworkImage(photoUrl!) : null,
-                child: photoUrl == null
-                    ? const Icon(
-                        Icons.person,
-                        size: 20,
-                        color: AppColors.primary,
-                      )
-                    : null,
-              ),
-              const SizedBox(width: AppSpacing.sm),
+              if (showProfile) ...[
+                // Caregiver Avatar
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: AppColors.primaryLight.withValues(
+                    alpha: 0.2,
+                  ),
+                  backgroundImage: photoUrl != null
+                      ? NetworkImage(photoUrl!)
+                      : null,
+                  child: photoUrl == null
+                      ? const Icon(
+                          Icons.person,
+                          size: 20,
+                          color: AppColors.primary,
+                        )
+                      : null,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+              ],
 
               // Logo Pequeno
               Image.asset(
@@ -70,18 +82,20 @@ class AppHeader extends StatelessWidget {
             ],
           ),
 
-          // Right side: Settings gear
-          IconButton(
-            icon: const Icon(
-              Icons.settings_outlined,
-              color: AppColors.textSecondary,
-              size: 24,
+          if (showSettings)
+            // Right side: Settings gear
+            IconButton(
+              icon: const Icon(
+                Icons.settings_outlined,
+                color: AppColors.textSecondary,
+                size: 24,
+              ),
+              onPressed:
+                  onSettingsPressed ??
+                  () {
+                    context.push(AppRoutes.settings);
+                  },
             ),
-            onPressed: onSettingsPressed ??
-                () {
-                  context.push(AppRoutes.settings);
-                },
-          ),
         ],
       ),
     );
