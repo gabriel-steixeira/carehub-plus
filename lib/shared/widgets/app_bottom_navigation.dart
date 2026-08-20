@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -39,28 +40,28 @@ class AppBottomNavigation extends StatelessWidget {
             children: [
               _buildItem(
                 index: 0,
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home,
+                icon: Symbols.home_rounded,
+                activeIcon: Symbols.home_rounded,
                 label: 'Início',
               ),
               _buildItem(
                 index: 1,
-                icon: Icons.assignment_outlined,
-                activeIcon: Icons.assignment,
+                icon: Symbols.select_check_box_rounded,
+                activeIcon: Symbols.select_check_box_rounded,
                 label: 'Tarefas',
               ),
               _buildCoraButton(index: 2),
               _buildItem(
                 index: 3,
-                icon: Icons.chat_bubble_outline_rounded,
-                activeIcon: Icons.chat_bubble_rounded,
+                icon: Symbols.chat_bubble_rounded,
+                activeIcon: Symbols.chat_bubble_rounded,
                 label: 'Chat',
                 badgeCount: 1,
               ),
               _buildItem(
                 index: 4,
-                icon: Icons.health_and_safety_outlined,
-                activeIcon: Icons.health_and_safety,
+                icon: Symbols.shield_with_heart_rounded,
+                activeIcon: Symbols.shield_with_heart_rounded,
                 label: 'SOS',
               ),
             ],
@@ -90,7 +91,12 @@ class AppBottomNavigation extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(isActive ? activeIcon : icon, color: color, size: 24),
+                Icon(
+                  isActive ? activeIcon : icon,
+                  color: color,
+                  size: 24,
+                  fill: isActive ? 1.0 : 0.0,
+                ),
                 if (badgeCount > 0)
                   Positioned(
                     top: -4,

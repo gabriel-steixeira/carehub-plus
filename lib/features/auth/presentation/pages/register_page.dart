@@ -6,6 +6,7 @@ import '../../../../app/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/app_responsive.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_page_frame.dart';
 import '../../data/repositories/auth_repository.dart';
@@ -61,13 +62,15 @@ class _RegisterView extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: AppSpacing.xxl),
+                        SizedBox(height: context.scaleSpacing(AppSpacing.lg)),
 
                         // Title and subtitle
                         Text(
                           'Crie sua conta',
-                          style: AppTypography.displayLarge.copyWith(
+                          textAlign: TextAlign.center,
+                          style: AppTypography.averiaTitleLarge.copyWith(
                             color: AppColors.textPrimary,
+                            fontSize: context.scaleFont(32),
                           ),
                         ),
                         const SizedBox(height: AppSpacing.xs),

@@ -6,6 +6,7 @@ import '../../../../app/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/app_responsive.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_header.dart';
@@ -88,10 +89,9 @@ class HomeView extends StatelessWidget {
                     Text(
                       'Quem vamos cuidar\nagora?',
                       textAlign: TextAlign.center,
-                      style: AppTypography.displayLarge.copyWith(
+                      style: AppTypography.averiaTitleLarge.copyWith(
                         color: AppColors.textPrimary,
-                        fontSize: 32,
-                        fontWeight: FontWeight.w700,
+                        fontSize: context.scaleFont(32),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -102,7 +102,7 @@ class HomeView extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: AppTypography.bodyLarge.copyWith(
                         color: AppColors.textSecondary,
-                        fontSize: 16,
+                        fontSize: context.scaleFont(16),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xxl),

@@ -164,4 +164,25 @@ extension ResponsiveContext on BuildContext {
   /// AppTypography.titleLarge.copyWith(fontSize: context.scaleFont(18));
   /// ```
   double scaleFont(double baseSize) => baseSize * fontScale;
+
+  /// Fator multiplicador de espaçamento por dispositivo.
+  ///
+  /// Mantém 1.0 no mobile (o design do Figma é mobile-first) e cresce de forma
+  /// contida nas telas maiores, no mesmo espírito de [fontScale].
+  double get spacingScale => responsive<double>(
+        mobile: 1.0,
+        tablet: 1.05,
+        desktop: 1.1,
+        ultraWide: 1.2,
+      );
+
+  /// Aplica [spacingScale] a um espaçamento base do design system.
+  ///
+  /// Use para manter uma proporção de espaço estável entre dispositivos,
+  /// em vez de fixar um valor em pixels.
+  ///
+  /// ```dart
+  /// SizedBox(height: context.scaleSpacing(AppSpacing.lg));
+  /// ```
+  double scaleSpacing(double baseSpacing) => baseSpacing * spacingScale;
 }

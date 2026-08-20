@@ -28,16 +28,25 @@ class AppHeader extends StatelessWidget {
   /// Whether the settings button is visible.
   final bool showSettings;
 
+  /// Height of the header content, excluding the status bar area.
+  ///
+  /// Keeps the header identical on every screen, whether or not the page
+  /// already consumes the safe area through `AppPageFrame`.
+  static const double contentHeight = AppSpacing.xxl + AppSpacing.sm;
+
   @override
   Widget build(BuildContext context) {
+    // Zero when an ancestor (AppPageFrame) already reserved the status bar area.
+    final statusBarHeight = MediaQuery.paddingOf(context).top;
+
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.only(
+      color: AppColors.background,
+      padding: EdgeInsets.only(
         left: AppSpacing.md,
         right: AppSpacing.md,
-        top: AppSpacing.xl + AppSpacing.sm,
-        bottom: AppSpacing.sm,
+        top: statusBarHeight,
       ),
+      height: statusBarHeight + contentHeight,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

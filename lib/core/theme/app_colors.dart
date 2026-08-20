@@ -43,7 +43,7 @@ class AppColors {
 
   // TEXT
   static const Color textPrimary = Color(0xFF1A1A2E);
-  static const Color textSecondary = Color(0xFF6B6B8A);
+  static const Color textSecondary = Color(0xFF494552);
   static const Color textHint = Color(0xFFB0B0C8);
   static const Color textInverse = Color(0xFFFFFFFF);
 

@@ -284,7 +284,7 @@ class _RegisterFormState extends State<RegisterForm> {
                 label: 'Cadastrar',
                 onPressed: _onSubmit,
                 isLoading: isLoading,
-                icon: Icons.arrow_forward_rounded,
+                suffixIcon: Icons.arrow_forward_rounded,
               ),
 
               const SizedBox(height: AppSpacing.lg),
