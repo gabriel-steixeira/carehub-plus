@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_member_avatar.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../categories/domain/entities/care_category_entity.dart';
+import '../../../categories/presentation/models/category_visuals.dart';
 import '../../data/models/chat_room_model.dart';
-import '../bloc/chat_bloc.dart';
 
 /// Cartão de um assunto que encaminha para a conversa correspondente.
 class ChatTile extends StatelessWidget {
@@ -17,29 +19,19 @@ class ChatTile extends StatelessWidget {
   });
 
   final ChatRoomModel room;
-  final ChatCategory category;
+
+  /// Categoria já resolvida pela tela a partir de `room.categoryId`.
+  final CareCategoryEntity category;
   final VoidCallback onTap;
-
-  String get _categoryLabel => switch (category) {
-    ChatCategory.health => 'Saúde',
-    ChatCategory.food => 'Alimentação',
-  };
-
-  IconData get _categoryIcon => switch (category) {
-    ChatCategory.health => Icons.medication_outlined,
-    ChatCategory.food => Icons.restaurant_outlined,
-  };
-
-  Color get _accentColor => switch (category) {
-    ChatCategory.health => AppColors.success,
-    ChatCategory.food => AppColors.info,
-  };
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = colorForCategory(category);
+    final categoryIcon = iconForCategory(category);
+
     return Semantics(
       button: true,
-      label: 'Assunto $_categoryLabel: ${room.title}',
+      label: 'Assunto ${category.label}: ${room.title}',
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.md),
         decoration: BoxDecoration(
@@ -57,7 +49,14 @@ class ChatTile extends StatelessWidget {
                 Container(
                   width: AppSpacing.xs,
                   height: AppSpacing.xxxl + AppSpacing.xl,
-                  color: _accentColor,
+                  color: accentColor,
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: AppSpacing.sm),
+                  child: AppMemberAvatar(
+                    photo: room.responsibleMemberPhotoUrl,
+                    diameter: AppSpacing.xxl,
+                  ),
                 ),
                 Expanded(
                   child: Padding(
@@ -68,13 +67,13 @@ class ChatTile extends StatelessWidget {
                         Row(
                           children: [
                             Icon(
-                              _categoryIcon,
+                              categoryIcon,
                               size: AppSpacing.md,
                               color: AppColors.textSecondary,
                             ),
                             const SizedBox(width: AppSpacing.xs),
                             Text(
-                              _categoryLabel,
+                              category.label,
                               style: AppTypography.bodyMedium.copyWith(
                                 color: AppColors.textSecondary,
                                 fontWeight: FontWeight.w600,
@@ -93,7 +92,7 @@ class ChatTile extends StatelessWidget {
                                 room.title,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: AppTypography.titleLarge.copyWith(
+                                style: AppTypography.averiaTitleLarge.copyWith(
                                   color: AppColors.textPrimary,
                                 ),
                               ),

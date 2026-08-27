@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,6 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/utils/validators.dart';
+import '../../../../services/image_upload_service.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../bloc/auth_bloc.dart';
@@ -25,11 +28,13 @@ class _RegisterFormState extends State<RegisterForm> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _imageUploadService = ImageUploadService();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _termsAccepted = false;
   bool _showTermsError = false;
+  File? _selectedImage;
 
   @override
   void dispose() {
@@ -38,6 +43,76 @@ class _RegisterFormState extends State<RegisterForm> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final source = await showModalBottomSheet<_ImageSourceChoice>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.radiusXl),
+        ),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Escolher foto',
+                style: AppTypography.titleMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined,
+                    color: AppColors.primary),
+                title: Text('Galeria',
+                    style: AppTypography.bodyLarge
+                        .copyWith(color: AppColors.textPrimary)),
+                onTap: () => Navigator.pop(ctx, _ImageSourceChoice.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined,
+                    color: AppColors.primary),
+                title: Text('Câmera',
+                    style: AppTypography.bodyLarge
+                        .copyWith(color: AppColors.textPrimary)),
+                onTap: () => Navigator.pop(ctx, _ImageSourceChoice.camera),
+              ),
+              if (_selectedImage != null)
+                ListTile(
+                  leading:
+                      const Icon(Icons.delete_outline, color: AppColors.error),
+                  title: Text('Remover foto',
+                      style: AppTypography.bodyLarge
+                          .copyWith(color: AppColors.error)),
+                  onTap: () => Navigator.pop(ctx, _ImageSourceChoice.remove),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    if (source == _ImageSourceChoice.remove) {
+      setState(() => _selectedImage = null);
+      return;
+    }
+
+    final file = source == _ImageSourceChoice.gallery
+        ? await _imageUploadService.pickImageFromGallery()
+        : await _imageUploadService.pickImageFromCamera();
+
+    if (file != null) {
+      setState(() => _selectedImage = file);
+    }
   }
 
   void _onSubmit() {
@@ -51,6 +126,7 @@ class _RegisterFormState extends State<RegisterForm> {
           name: _nameController.text.trim(),
           email: _emailController.text.trim(),
           password: _passwordController.text,
+          imageFile: _selectedImage,
         ),
       );
     }
@@ -68,6 +144,64 @@ class _RegisterFormState extends State<RegisterForm> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Photo picker
+              Center(
+                child: GestureDetector(
+                  onTap: isLoading ? null : _pickImage,
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 88,
+                        height: 88,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.surfaceVariant,
+                          border: Border.all(
+                            color: AppColors.border,
+                            width: 2,
+                          ),
+                          image: _selectedImage != null
+                              ? DecorationImage(
+                                  image: FileImage(_selectedImage!),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: _selectedImage == null
+                            ? const Icon(
+                                Icons.person_outline,
+                                size: 44,
+                                color: AppColors.primaryLight,
+                              )
+                            : null,
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white,
+                              width: 2,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt_outlined,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+
               // Nome Completo field
               AppTextField(
                 controller: _nameController,
@@ -335,3 +469,10 @@ class _RegisterFormState extends State<RegisterForm> {
     );
   }
 }
+
+
+// ---------------------------------------------------------------------------
+// Image Source Choice (private to this file)
+// ---------------------------------------------------------------------------
+
+enum _ImageSourceChoice { gallery, camera, remove }

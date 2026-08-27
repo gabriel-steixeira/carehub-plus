@@ -27,3 +27,48 @@ class ServerFailure extends AppException {
   const ServerFailure([super.message = 'Erro no servidor'])
     : super(code: 'SERVER_ERROR');
 }
+
+/// Repository failure with detailed error categorization.
+/// Used for handling database, network, and SSL errors.
+class RepositoryFailure extends AppException {
+  const RepositoryFailure(
+    super.message, {
+    super.code = 'REPOSITORY_ERROR',
+    required this.errorType,
+    this.originalError,
+    this.canRetry = false,
+  });
+
+  /// Categorizes the type of repository error.
+  final RepositoryErrorType errorType;
+
+  /// Original exception that caused the failure.
+  final Exception? originalError;
+
+  /// Whether the operation can be retried.
+  final bool canRetry;
+}
+
+/// Categorization of repository errors.
+enum RepositoryErrorType {
+  /// SSL/Certificate verification failed.
+  sslCertificate,
+
+  /// Network connection error.
+  network,
+
+  /// Firebase/Firestore operation failed.
+  firestore,
+
+  /// User is not authenticated.
+  notAuthenticated,
+
+  /// Permission denied by Firestore rules.
+  permissionDenied,
+
+  /// Invalid data or validation error.
+  invalidData,
+
+  /// Unknown error.
+  unknown,
+}

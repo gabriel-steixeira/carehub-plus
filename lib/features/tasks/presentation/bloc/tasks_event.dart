@@ -26,12 +26,12 @@ class TasksFilterChangedEvent extends TasksEvent {
 }
 
 class TasksCategoryFilterChangedEvent extends TasksEvent {
-  const TasksCategoryFilterChangedEvent({this.category});
+  const TasksCategoryFilterChangedEvent({this.categoryId});
 
-  final TaskCategory? category;
+  final String? categoryId;
 
   @override
-  List<Object?> get props => [category];
+  List<Object?> get props => [categoryId];
 }
 
 class TasksProfileChangedEvent extends TasksEvent {
@@ -76,29 +76,35 @@ class TaskCreateEvent extends TasksEvent {
     required this.title,
     required this.description,
     required this.scheduledTime,
-    required this.category,
+    required this.categoryId,
     required this.frequency,
     this.assignedToName,
+    this.assignedToMemberId,
+    this.assignedToPhotoUrl,
   });
 
   final String careRecipientId;
   final String title;
   final String description;
   final DateTime scheduledTime;
-  final TaskCategory category;
+  final String categoryId;
   final TaskFrequency frequency;
   final String? assignedToName;
+  final String? assignedToMemberId;
+  final String? assignedToPhotoUrl;
 
   @override
   List<Object?> get props => [
-        careRecipientId,
-        title,
-        description,
-        scheduledTime,
-        category,
-        frequency,
-        assignedToName,
-      ];
+    careRecipientId,
+    title,
+    description,
+    scheduledTime,
+    categoryId,
+    frequency,
+    assignedToName,
+    assignedToMemberId,
+    assignedToPhotoUrl,
+  ];
 }
 
 class TaskToggleCompletionEvent extends TasksEvent {

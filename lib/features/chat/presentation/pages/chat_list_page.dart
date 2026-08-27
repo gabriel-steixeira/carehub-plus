@@ -6,6 +6,9 @@ import '../../../../app/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../features/categories/data/repositories/care_categories_repository.dart';
+import '../../../../features/categories/presentation/bloc/care_categories_bloc.dart';
+import '../../../../features/categories/domain/entities/care_category_entity.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
 import '../../../../shared/widgets/app_empty_view.dart';
 import '../../../../shared/widgets/app_error_view.dart';
@@ -14,21 +17,43 @@ import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_page_frame.dart';
 import '../../../../shared/widgets/app_responsive_body.dart';
 import '../../../../shared/widgets/app_search_field.dart';
+import '../../../../shared/widgets/category_chip_selector.dart';
+import '../../../../shared/widgets/manage_categories_bottom_sheet.dart';
+import '../../../dashboard/presentation/widgets/active_profile_chip.dart';
+import '../../../network/data/repositories/network_repository.dart';
+import '../../../network/presentation/bloc/network_bloc.dart';
 import '../../data/repositories/chat_repository.dart';
 import '../bloc/chat_bloc.dart';
 import '../widgets/chat_filter_section.dart';
 import '../widgets/chat_tile.dart';
+import '../widgets/create_chat_room_bottom_sheet.dart';
 
 /// Disponibiliza os assuntos de cuidado e seus atalhos de filtragem.
 class ChatListPage extends StatelessWidget {
-  const ChatListPage({super.key});
+  const ChatListPage({super.key, this.careRecipientId});
+
+  final String? careRecipientId;
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) =>
-          ChatBloc(repository: ChatRepository())
-            ..add(const ChatLoadRoomsEvent()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) =>
+              ChatBloc(repository: ChatRepository())
+                ..add(ChatLoadRoomsEvent(careRecipientId: careRecipientId)),
+        ),
+        BlocProvider(
+          create: (context) =>
+              NetworkBloc(repository: NetworkRepository())
+                ..add(const NetworkLoadEvent()),
+        ),
+        BlocProvider(
+          create: (context) =>
+              CareCategoriesBloc(repository: CareCategoriesRepository())
+                ..add(const CareCategoriesLoadEvent()),
+        ),
+      ],
       child: const ChatListView(),
     );
   }
@@ -65,30 +90,6 @@ class _ChatListViewState extends State<ChatListView> {
     }
   }
 
-  void _showNewTopicUnavailable() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'A criação de assuntos estará disponível em breve.',
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textInverse,
-          ),
-        ),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  Map<String, String?> _profileAvatars(ChatState state) {
-    return {
-      for (final profileName in state.profileNames)
-        profileName: state.rooms
-            .firstWhere((room) => room.careRecipientName == profileName)
-            .avatarUrl,
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -116,15 +117,15 @@ class _ChatListViewState extends State<ChatListView> {
                             state.errorMessage ??
                             'Erro ao carregar os assuntos.',
                         onRetry: () => context.read<ChatBloc>().add(
-                          const ChatLoadRoomsEvent(),
+                          ChatLoadRoomsEvent(
+                            careRecipientId: state.careRecipientId,
+                          ),
                         ),
                       );
                     }
                     return _ChatContent(
                       state: state,
                       searchController: _searchController,
-                      profileAvatars: _profileAvatars(state),
-                      onCreateTopic: _showNewTopicUnavailable,
                     );
                   },
                 ),
@@ -142,34 +143,34 @@ class _ChatListViewState extends State<ChatListView> {
 }
 
 class _ChatContent extends StatelessWidget {
-  const _ChatContent({
-    required this.state,
-    required this.searchController,
-    required this.profileAvatars,
-    required this.onCreateTopic,
-  });
+  const _ChatContent({required this.state, required this.searchController});
 
   final ChatState state;
   final TextEditingController searchController;
-  final Map<String, String?> profileAvatars;
-  final VoidCallback onCreateTopic;
 
   @override
   Widget build(BuildContext context) {
     final rooms = state.filteredRooms;
+
+    // Resolve o perfil selecionado a partir do nome armazenado no estado.
+    final selectedProfile = state.profiles.isEmpty
+        ? null
+        : state.profiles
+                  .where((p) => p.id == state.careRecipientId)
+                  .firstOrNull ??
+              state.profiles.first;
+
     return AppResponsiveBody(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ChatProfileFilterSection(
-            profiles: profileAvatars,
-            selectedProfileName: state.selectedProfileName,
-            onProfileSelected: (profileName) => context.read<ChatBloc>().add(
-              ChatProfileChangedEvent(profileName: profileName),
+          if (selectedProfile != null) ...[
+            ActiveProfileChip(
+              profile: selectedProfile,
+              onChangeTap: () => context.go(AppRoutes.home),
             ),
-            onAddProfile: () => context.go(AppRoutes.home),
-          ),
-          const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.md),
+          ],
           AppSearchField(
             hintText: 'Buscar assuntos',
             controller: searchController,
@@ -187,7 +188,7 @@ class _ChatContent extends StatelessWidget {
                   children: [
                     Text(
                       'Assuntos',
-                      style: AppTypography.displayLarge.copyWith(
+                      style: AppTypography.averiaDisplayLarge.copyWith(
                         color: AppColors.textPrimary,
                       ),
                     ),
@@ -201,16 +202,35 @@ class _ChatContent extends StatelessWidget {
                   ],
                 ),
               ),
-              _NewTopicButton(onPressed: onCreateTopic),
+              _NewTopicButton(
+                onPressed: state.careRecipientId == null
+                    ? null
+                    : () => CreateChatRoomBottomSheet.show(
+                        context,
+                        careRecipientId: state.careRecipientId!,
+                        careRecipientName: selectedProfile?.name ?? '',
+                        avatarUrl: selectedProfile?.photoUrl,
+                      ),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.xl),
-          ChatTopicFilterSection(
-            selectedCategory: state.selectedCategory,
+          BlocBuilder<CareCategoriesBloc, CareCategoriesState>(
+            builder: (context, categoriesState) {
+              return CategoryChipSelector(
+                categories: categoriesState.categories,
+                selectedCategoryId: state.selectedCategoryId,
+                onCategorySelected: (categoryId) => context
+                    .read<ChatBloc>()
+                    .add(ChatCategoryChangedEvent(categoryId: categoryId)),
+                onManageCategories: () =>
+                    ManageCategoriesBottomSheet.show(context),
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ChatSortDropdown(
             sortOption: state.sortOption,
-            onCategorySelected: (category) => context.read<ChatBloc>().add(
-              ChatCategoryChangedEvent(category: category),
-            ),
             onSortSelected: (sortOption) => context.read<ChatBloc>().add(
               ChatSortChangedEvent(sortOption: sortOption),
             ),
@@ -226,16 +246,27 @@ class _ChatContent extends StatelessWidget {
               ),
             )
           else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: rooms.length,
-              itemBuilder: (context, index) {
-                final room = rooms[index];
-                return ChatTile(
-                  room: room,
-                  category: chatCategoryForRoom(room),
-                  onTap: () => context.push(AppRoutes.chatRoom, extra: room),
+            BlocBuilder<CareCategoriesBloc, CareCategoriesState>(
+              builder: (context, categoriesState) {
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: rooms.length,
+                  itemBuilder: (context, index) {
+                    final room = rooms[index];
+                    final category = categoriesState.categories.firstWhere(
+                      (c) => c.id == room.categoryId,
+                      orElse: () => categoriesState.categories.isNotEmpty
+                          ? categoriesState.categories.last
+                          : const _FallbackCategory(),
+                    );
+                    return ChatTile(
+                      room: room,
+                      category: category,
+                      onTap: () =>
+                          context.push(AppRoutes.chatRoom, extra: room),
+                    );
+                  },
                 );
               },
             ),
@@ -249,12 +280,12 @@ class _ChatContent extends StatelessWidget {
 class _NewTopicButton extends StatelessWidget {
   const _NewTopicButton({required this.onPressed});
 
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.primary,
+      color: onPressed == null ? AppColors.border : AppColors.primary,
       borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
       child: InkWell(
         onTap: onPressed,
@@ -281,4 +312,11 @@ class _NewTopicButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Categoria neutra usada apenas quando a lista de categorias ainda não
+/// carregou — nunca persistida, só evita um crash visual momentâneo.
+class _FallbackCategory extends CareCategoryEntity {
+  const _FallbackCategory()
+    : super(id: 'other', label: 'Outro', iconKey: 'other', colorKey: 'grey');
 }

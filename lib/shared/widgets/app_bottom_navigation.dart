@@ -7,10 +7,18 @@ import '../../core/theme/app_typography.dart';
 
 /// App-wide bottom navigation bar.
 class AppBottomNavigation extends StatelessWidget {
-  const AppBottomNavigation({super.key, this.currentIndex = 0, this.onTap});
+  const AppBottomNavigation({
+    super.key,
+    this.currentIndex = 0,
+    this.onTap,
+    this.chatBadgeCount = 0,
+  });
 
   final int currentIndex;
   final ValueChanged<int>? onTap;
+
+  /// Quantidade de chats não lidos exibida no badge do item Chat.
+  final int chatBadgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +64,7 @@ class AppBottomNavigation extends StatelessWidget {
                 icon: Symbols.chat_bubble_rounded,
                 activeIcon: Symbols.chat_bubble_rounded,
                 label: 'Chat',
-                badgeCount: 1,
+                badgeCount: chatBadgeCount,
               ),
               _buildItem(
                 index: 4,
@@ -113,10 +121,13 @@ class AppBottomNavigation extends StatelessWidget {
                       ),
                       child: Text(
                         '$badgeCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
+                        style: AppTypography.resolve(
+                          text: '$badgeCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -127,10 +138,13 @@ class AppBottomNavigation extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               label,
-              style: AppTypography.labelSmall.copyWith(
-                color: color,
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+              style: AppTypography.resolve(
+                text: label,
+                style: AppTypography.labelSmall.copyWith(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -178,10 +192,13 @@ class AppBottomNavigation extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               'Cora',
-              style: AppTypography.labelSmall.copyWith(
-                color: color,
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+              style: AppTypography.resolve(
+                text: 'Cora',
+                style: AppTypography.labelSmall.copyWith(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+                ),
               ),
             ),
           ],

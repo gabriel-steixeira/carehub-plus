@@ -8,7 +8,12 @@ abstract class ChatEvent extends Equatable {
 }
 
 class ChatLoadRoomsEvent extends ChatEvent {
-  const ChatLoadRoomsEvent();
+  const ChatLoadRoomsEvent({this.careRecipientId});
+
+  final String? careRecipientId;
+
+  @override
+  List<Object?> get props => [careRecipientId];
 }
 
 class ChatSearchQueryChangedEvent extends ChatEvent {
@@ -30,12 +35,12 @@ class ChatProfileChangedEvent extends ChatEvent {
 }
 
 class ChatCategoryChangedEvent extends ChatEvent {
-  const ChatCategoryChangedEvent({this.category});
+  const ChatCategoryChangedEvent({this.categoryId});
 
-  final ChatCategory? category;
+  final String? categoryId;
 
   @override
-  List<Object?> get props => [category];
+  List<Object?> get props => [categoryId];
 }
 
 class ChatSortChangedEvent extends ChatEvent {
@@ -69,4 +74,39 @@ class ChatSendMessageEvent extends ChatEvent {
 
   @override
   List<Object?> get props => [roomId, text, type];
+}
+
+/// Cria um novo assunto (sala de conversa) para um Care Recipient.
+class ChatCreateRoomEvent extends ChatEvent {
+  const ChatCreateRoomEvent({
+    required this.careRecipientId,
+    required this.title,
+    required this.careRecipientName,
+    required this.categoryId,
+    this.avatarUrl,
+    this.responsibleMemberId,
+    this.responsibleMemberName,
+    this.responsibleMemberPhotoUrl,
+  });
+
+  final String careRecipientId;
+  final String title;
+  final String careRecipientName;
+  final String categoryId;
+  final String? avatarUrl;
+  final String? responsibleMemberId;
+  final String? responsibleMemberName;
+  final String? responsibleMemberPhotoUrl;
+
+  @override
+  List<Object?> get props => [
+    careRecipientId,
+    title,
+    careRecipientName,
+    categoryId,
+    avatarUrl,
+    responsibleMemberId,
+    responsibleMemberName,
+    responsibleMemberPhotoUrl,
+  ];
 }

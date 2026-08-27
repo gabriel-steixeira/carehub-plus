@@ -35,6 +35,14 @@ class AppShadows {
     BoxShadow(color: _neutral04, blurRadius: 6, offset: Offset(0, 2)),
   ];
 
+  /// Preto a 7% — sombra dos painéis tingidos do Figma.
+  static const Color _neutral07 = Color(0x12000000);
+
+  /// Painéis tingidos (`AppTintedCard`): faixas e cabeçalhos de seção.
+  static const List<BoxShadow> panel = [
+    BoxShadow(color: _neutral07, blurRadius: 2, offset: Offset(0, 2)),
+  ];
+
   /// Modais e bottom sheets.
   static const List<BoxShadow> overlay = [
     BoxShadow(color: _neutral08, blurRadius: 16, offset: Offset(0, -2)),
@@ -45,10 +53,10 @@ class AppShadows {
   /// Recebe a cor por parâmetro para não duplicar a paleta aqui —
   /// passe `AppColors.primary` no ponto de uso.
   static List<BoxShadow> accent(Color color) => [
-        BoxShadow(
-          color: color.withValues(alpha: 0.25),
-          blurRadius: 6,
-          offset: const Offset(0, 3),
-        ),
-      ];
+    BoxShadow(
+      color: color.withValues(alpha: 0.25),
+      blurRadius: 6,
+      offset: const Offset(0, 3),
+    ),
+  ];
 }

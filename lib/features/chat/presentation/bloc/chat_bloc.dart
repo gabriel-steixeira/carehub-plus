@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../home/data/models/care_recipient_model.dart';
+import '../../../home/data/repositories/home_repository.dart';
 import '../../data/models/chat_message_model.dart';
 import '../../data/models/chat_room_model.dart';
 import '../../data/repositories/chat_repository.dart';
@@ -9,8 +11,9 @@ part 'chat_event.dart';
 part 'chat_state.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
-  ChatBloc({required ChatRepository repository})
+  ChatBloc({required ChatRepository repository, HomeRepository? homeRepository})
     : _repository = repository,
+      _homeRepository = homeRepository ?? HomeRepository(),
       super(const ChatState()) {
     on<ChatLoadRoomsEvent>(_onLoadRooms);
     on<ChatSearchQueryChangedEvent>(_onSearchQueryChanged);
@@ -19,9 +22,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatSortChangedEvent>(_onSortChanged);
     on<ChatOpenRoomEvent>(_onOpenRoom);
     on<ChatSendMessageEvent>(_onSendMessage);
+    on<ChatCreateRoomEvent>(_onCreateRoom);
   }
 
   final ChatRepository _repository;
+  final HomeRepository _homeRepository;
 
   Future<void> _onLoadRooms(
     ChatLoadRoomsEvent event,
@@ -29,8 +34,29 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) async {
     emit(state.copyWith(status: ChatStatus.loading));
     try {
-      final rooms = await _repository.fetchChatRooms();
-      emit(state.copyWith(status: ChatStatus.success, rooms: rooms));
+      final caregiver = await _homeRepository.fetchCaregiver();
+      final profiles = await _homeRepository.fetchCareRecipients();
+      final selectedProfileId =
+          event.careRecipientId ?? profiles.firstOrNull?.id;
+      final rooms = selectedProfileId == null
+          ? const <ChatRoomModel>[]
+          : await _repository.fetchChatRooms(
+              careRecipientId: selectedProfileId,
+            );
+      final selectedProfile = profiles
+          .where((profile) => profile.id == selectedProfileId)
+          .firstOrNull;
+
+      emit(
+        state.copyWith(
+          status: ChatStatus.success,
+          rooms: rooms,
+          profiles: profiles,
+          caregiverPhotoUrl: caregiver.photoUrl,
+          careRecipientId: selectedProfileId,
+          selectedProfileName: selectedProfile?.name,
+        ),
+      );
     } catch (e) {
       emit(
         state.copyWith(status: ChatStatus.failure, errorMessage: e.toString()),
@@ -63,8 +89,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) {
     emit(
       state.copyWith(
-        selectedCategory: event.category,
-        clearSelectedCategory: event.category == null,
+        selectedCategoryId: event.categoryId,
+        clearSelectedCategory: event.categoryId == null,
       ),
     );
   }
@@ -109,6 +135,30 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       emit(state.copyWith(messages: updatedMessages, isSending: false));
     } catch (e) {
       emit(state.copyWith(isSending: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onCreateRoom(
+    ChatCreateRoomEvent event,
+    Emitter<ChatState> emit,
+  ) async {
+    emit(state.copyWith(isCreatingRoom: true));
+    try {
+      final newRoom = await _repository.addRoom(
+        careRecipientId: event.careRecipientId,
+        title: event.title,
+        careRecipientName: event.careRecipientName,
+        categoryId: event.categoryId,
+        avatarUrl: event.avatarUrl,
+        responsibleMemberId: event.responsibleMemberId,
+        responsibleMemberName: event.responsibleMemberName,
+        responsibleMemberPhotoUrl: event.responsibleMemberPhotoUrl,
+      );
+      emit(
+        state.copyWith(rooms: [newRoom, ...state.rooms], isCreatingRoom: false),
+      );
+    } catch (e) {
+      emit(state.copyWith(isCreatingRoom: false, errorMessage: e.toString()));
     }
   }
 }

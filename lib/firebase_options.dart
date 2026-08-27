@@ -50,20 +50,19 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBbW65LwhXtWrqBF_vH4fa0_1Q9C4q9NdI',
-    appId: '1:363466856130:android:e116cc4931a4e306a64d5b',
-    messagingSenderId: '363466856130',
-    projectId: 'carehub-plus',
-    storageBucket: 'carehub-plus.firebasestorage.app',
+    apiKey: 'AIzaSyCOb5ErxZ_V1ISP0ObBNn6RUfQIAClQdc4',
+    appId: '1:970167831719:android:0f1f0ba53aaa7525e65f82',
+    messagingSenderId: '970167831719',
+    projectId: 'carehub-plus-21164',
+    storageBucket: 'carehub-plus-21164.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDxD_y16Xuci9Lh8TW2eUjsJ1LH2FeG3Rc',
-    appId: '1:363466856130:ios:c1ec0f22137080faa64d5b',
-    messagingSenderId: '363466856130',
-    projectId: 'carehub-plus',
-    storageBucket: 'carehub-plus.firebasestorage.app',
-    iosClientId: '363466856130-lknu7d7tflefcnnkcudo1od44uenegsm.apps.googleusercontent.com',
+    apiKey: 'AIzaSyBacFWFe1Gj199Ui49grPLrHkOQcFgK2Gc',
+    appId: '1:970167831719:ios:8567e0a24a8c80f9e65f82',
+    messagingSenderId: '970167831719',
+    projectId: 'carehub-plus-21164',
+    storageBucket: 'carehub-plus-21164.firebasestorage.app',
+    iosClientId: '970167831719-pulc0aa9stkf322e9i97013pcdvecj09.apps.googleusercontent.com',
     iosBundleId: 'com.carehubplus.carehubPlus',
   );
 }

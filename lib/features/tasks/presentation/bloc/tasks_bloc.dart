@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../home/data/models/care_recipient_model.dart';
 import '../../../home/data/models/caregiver_model.dart';
 import '../../../home/data/repositories/home_repository.dart';
-import '../../data/models/task_category.dart';
 import '../../data/models/task_frequency.dart';
 import '../../data/models/task_model.dart';
 import '../../data/repositories/tasks_repository.dart';
@@ -16,9 +15,9 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
   TasksBloc({
     required TasksRepository repository,
     HomeRepository? homeRepository,
-  })  : _repository = repository,
-        _homeRepository = homeRepository ?? HomeRepository(),
-        super(TasksState(selectedDate: DateTime.now())) {
+  }) : _repository = repository,
+       _homeRepository = homeRepository ?? HomeRepository(),
+       super(TasksState(selectedDate: DateTime.now())) {
     on<TasksLoadEvent>(_onLoad);
     on<TasksFilterChangedEvent>(_onFilterChanged);
     on<TasksCategoryFilterChangedEvent>(_onCategoryFilterChanged);
@@ -34,29 +33,31 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
   final TasksRepository _repository;
   final HomeRepository _homeRepository;
 
-  Future<void> _onLoad(
-    TasksLoadEvent event,
-    Emitter<TasksState> emit,
-  ) async {
+  Future<void> _onLoad(TasksLoadEvent event, Emitter<TasksState> emit) async {
     emit(state.copyWith(status: TasksStatus.loading));
     try {
       final caregiver = await _homeRepository.fetchCaregiver();
       final profiles = await _homeRepository.fetchCareRecipients();
       final tasks = await _repository.fetchTasks();
 
-      emit(state.copyWith(
-        status: TasksStatus.success,
-        caregiver: caregiver,
-        profiles: profiles,
-        tasks: tasks,
-        careRecipientId: event.careRecipientId,
-        selectedProfileId: event.careRecipientId ?? 'all',
-      ));
+      emit(
+        state.copyWith(
+          status: TasksStatus.success,
+          caregiver: caregiver,
+          profiles: profiles,
+          tasks: tasks,
+          careRecipientId: event.careRecipientId,
+          // Single-profile only: default to the first profile when none was
+          // provided through navigation (there is no longer an "all" option).
+          selectedProfileId:
+              event.careRecipientId ??
+              (profiles.isNotEmpty ? profiles.first.id : ''),
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        status: TasksStatus.failure,
-        errorMessage: e.toString(),
-      ));
+      emit(
+        state.copyWith(status: TasksStatus.failure, errorMessage: e.toString()),
+      );
     }
   }
 
@@ -71,7 +72,12 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     TasksCategoryFilterChangedEvent event,
     Emitter<TasksState> emit,
   ) {
-    emit(state.copyWith(selectedCategory: event.category));
+    emit(
+      state.copyWith(
+        selectedCategoryId: event.categoryId,
+        clearSelectedCategory: event.categoryId == null,
+      ),
+    );
   }
 
   void _onProfileChanged(
@@ -88,17 +94,11 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     emit(state.copyWith(searchQuery: event.query));
   }
 
-  void _onDateChanged(
-    TasksDateChangedEvent event,
-    Emitter<TasksState> emit,
-  ) {
+  void _onDateChanged(TasksDateChangedEvent event, Emitter<TasksState> emit) {
     emit(state.copyWith(selectedDate: event.selectedDate));
   }
 
-  void _onSortChanged(
-    TasksSortChangedEvent event,
-    Emitter<TasksState> emit,
-  ) {
+  void _onSortChanged(TasksSortChangedEvent event, Emitter<TasksState> emit) {
     emit(state.copyWith(sortOption: event.sortOption));
   }
 
@@ -114,24 +114,25 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
         title: event.title,
         description: event.description,
         scheduledTime: event.scheduledTime,
-        category: event.category,
+        categoryId: event.categoryId,
         frequency: event.frequency,
         assignedToName: event.assignedToName,
+        assignedToMemberId: event.assignedToMemberId,
+        assignedToPhotoUrl: event.assignedToPhotoUrl,
       );
 
       final created = await _repository.addTask(newTask);
       final updatedList = List<TaskModel>.from(state.tasks)..insert(0, created);
 
-      emit(state.copyWith(
-        tasks: updatedList,
-        isCreatingTask: false,
-        createTaskSuccess: true,
-      ));
+      emit(
+        state.copyWith(
+          tasks: updatedList,
+          isCreatingTask: false,
+          createTaskSuccess: true,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        isCreatingTask: false,
-        errorMessage: e.toString(),
-      ));
+      emit(state.copyWith(isCreatingTask: false, errorMessage: e.toString()));
     }
   }
 
@@ -160,8 +161,9 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
   ) async {
     try {
       await _repository.deleteTask(event.taskId);
-      final updatedList =
-          state.tasks.where((t) => t.id != event.taskId).toList();
+      final updatedList = state.tasks
+          .where((t) => t.id != event.taskId)
+          .toList();
       emit(state.copyWith(tasks: updatedList));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));

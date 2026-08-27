@@ -6,23 +6,34 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../categories/domain/entities/care_category_entity.dart';
+import '../../../categories/presentation/models/category_visuals.dart';
 import '../../data/models/task_model.dart';
 import '../bloc/tasks_bloc.dart';
 
 /// Bottom sheet showing task details with check-in option (note).
 class TaskDetailModal extends StatefulWidget {
-  const TaskDetailModal({super.key, required this.task});
+  const TaskDetailModal({
+    super.key,
+    required this.task,
+    required this.category,
+  });
 
   final TaskModel task;
+  final CareCategoryEntity category;
 
-  static Future<void> show(BuildContext context, TaskModel task) {
+  static Future<void> show(
+    BuildContext context,
+    TaskModel task,
+    CareCategoryEntity category,
+  ) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => BlocProvider.value(
         value: context.read<TasksBloc>(),
-        child: TaskDetailModal(task: task),
+        child: TaskDetailModal(task: task, category: category),
       ),
     );
   }
@@ -49,6 +60,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   @override
   Widget build(BuildContext context) {
     final task = widget.task;
+    final category = widget.category;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -81,10 +93,13 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.sm),
                   decoration: BoxDecoration(
-                    color: task.category.color.withValues(alpha: 0.12),
+                    color: colorForCategory(category).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   ),
-                  child: Icon(task.category.icon, color: task.category.color),
+                  child: Icon(
+                    iconForCategory(category),
+                    color: colorForCategory(category),
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
@@ -92,9 +107,9 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        task.category.label,
+                        category.label,
                         style: AppTypography.labelSmall.copyWith(
-                          color: task.category.color,
+                          color: colorForCategory(category),
                           fontWeight: FontWeight.bold,
                         ),
                       ),

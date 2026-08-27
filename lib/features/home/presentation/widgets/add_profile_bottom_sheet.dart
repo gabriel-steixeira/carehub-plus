@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/app_responsive.dart';
+import '../../../../services/image_upload_service.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../data/models/care_recipient_type.dart';
@@ -22,6 +26,11 @@ class AddProfileBottomSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      // Sem constraints o modal cresce até a tela inteira conforme o
+      // formulário aumenta. O conteúdo extra fica na rolagem interna.
+      constraints: BoxConstraints(
+        maxHeight: context.screenHeight * 0.85,
+      ),
       builder: (_) => BlocProvider.value(
         value: context.read<HomeBloc>(),
         child: const AddProfileBottomSheet(),
@@ -36,14 +45,86 @@ class AddProfileBottomSheet extends StatefulWidget {
 class _AddProfileBottomSheetState extends State<AddProfileBottomSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _imageUploadService = ImageUploadService();
 
   CareRecipientType _selectedType = CareRecipientType.elderly;
   DateTime? _dateOfBirth;
+  File? _selectedImage;
 
   @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final source = await showModalBottomSheet<ImageSourceChoice>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.radiusXl),
+        ),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Escolher foto',
+                style: AppTypography.titleMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined,
+                    color: AppColors.primary),
+                title: Text('Galeria',
+                    style: AppTypography.bodyLarge
+                        .copyWith(color: AppColors.textPrimary)),
+                onTap: () => Navigator.pop(ctx, ImageSourceChoice.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined,
+                    color: AppColors.primary),
+                title: Text('Câmera',
+                    style: AppTypography.bodyLarge
+                        .copyWith(color: AppColors.textPrimary)),
+                onTap: () => Navigator.pop(ctx, ImageSourceChoice.camera),
+              ),
+              if (_selectedImage != null)
+                ListTile(
+                  leading:
+                      const Icon(Icons.delete_outline, color: AppColors.error),
+                  title: Text('Remover foto',
+                      style: AppTypography.bodyLarge
+                          .copyWith(color: AppColors.error)),
+                  onTap: () => Navigator.pop(ctx, ImageSourceChoice.remove),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    if (source == ImageSourceChoice.remove) {
+      setState(() => _selectedImage = null);
+      return;
+    }
+
+    final file = source == ImageSourceChoice.gallery
+        ? await _imageUploadService.pickImageFromGallery()
+        : await _imageUploadService.pickImageFromCamera();
+
+    if (file != null) {
+      setState(() => _selectedImage = file);
+    }
   }
 
   Future<void> _pickDate() async {
@@ -72,14 +153,27 @@ class _AddProfileBottomSheetState extends State<AddProfileBottomSheet> {
   }
 
   void _submit(BuildContext context) {
+    // Verifica se o formulário é válido
     if (!_formKey.currentState!.validate()) return;
-    context.read<HomeBloc>().add(
-          HomeAddProfileEvent(
-            name: _nameController.text.trim(),
-            recipientType: _selectedType,
-            dateOfBirth: _dateOfBirth,
-          ),
-        );
+    
+    // Obtém o estado atual do BLoC
+    final homeBloc = context.read<HomeBloc>();
+    final state = homeBloc.state;
+    
+    // Protege contra dupla submissão - se já está adicionando, não faz nada
+    if (state.isAddingProfile) {
+      return;
+    }
+    
+    // Dispara o evento apenas se não está em processo de adição
+    homeBloc.add(
+      HomeAddProfileEvent(
+        name: _nameController.text.trim(),
+        recipientType: _selectedType,
+        dateOfBirth: _dateOfBirth,
+        imageFile: _selectedImage,
+      ),
+    );
   }
 
   @override
@@ -92,33 +186,42 @@ class _AddProfileBottomSheetState extends State<AddProfileBottomSheet> {
           prev.addProfileError != curr.addProfileError,
       listener: (context, state) {
         if (state.addProfileSuccess) {
+          // Fecha o bottom sheet
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Perfil criado com sucesso!',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white,
+          
+          // Aguarda um frame para o sheet fechar completamente antes de mostrar o SnackBar
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Perfil criado com sucesso!',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 3),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
                 ),
-              ),
-              backgroundColor: AppColors.success,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              ),
-            ),
-          );
+              );
+            }
+          });
         } else if (state.addProfileError != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Erro ao criar perfil. Tente novamente.',
+                state.addProfileError!,
                 style: AppTypography.bodyMedium.copyWith(
                   color: Colors.white,
                 ),
               ),
               backgroundColor: AppColors.error,
               behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 4),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               ),
@@ -150,27 +253,23 @@ class _AddProfileBottomSheetState extends State<AddProfileBottomSheet> {
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            // Title
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: Text(
-                'Criar Perfil',
-                style: AppTypography.headlineMedium.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
+           // Title
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Text(
+                'Adicionar Novo Perfil',
+                  textAlign: TextAlign.left,
+                  style: AppTypography.averiaDisplayLarge.copyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: context.scaleFont(24),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.xs),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: Text(
-                'Preencha os detalhes do perfil a ser cuidado.',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
+          
+            
             const SizedBox(height: AppSpacing.lg),
 
             // Form
@@ -186,47 +285,58 @@ class _AddProfileBottomSheetState extends State<AddProfileBottomSheet> {
                     children: [
                       // Avatar placeholder + button
                       Center(
-                        child: Stack(
-                          children: [
-                            Container(
-                              width: 88,
-                              height: 88,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.surfaceVariant,
-                                border: Border.all(
-                                  color: AppColors.border,
-                                  width: 2,
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.person_outline,
-                                size: 44,
-                                color: AppColors.primaryLight,
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Container(
-                                width: 28,
-                                height: 28,
+                        child: GestureDetector(
+                          onTap: _pickImage,
+                          child: Stack(
+                            children: [
+                              Container(
+                                width: 88,
+                                height: 88,
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary,
                                   shape: BoxShape.circle,
+                                  color: AppColors.surfaceVariant,
                                   border: Border.all(
-                                    color: Colors.white,
+                                    color: AppColors.border,
                                     width: 2,
                                   ),
+                                  image: _selectedImage != null
+                                      ? DecorationImage(
+                                          image: FileImage(_selectedImage!),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
                                 ),
-                                child: const Icon(
-                                  Icons.camera_alt_outlined,
-                                  size: 14,
-                                  color: Colors.white,
+                                child: _selectedImage == null
+                                    ? const Icon(
+                                        Icons.person_outline,
+                                        size: 44,
+                                        color: AppColors.primaryLight,
+                                      )
+                                    : null,
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt_outlined,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
@@ -444,3 +554,10 @@ class _TypeChipSelector extends StatelessWidget {
     };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Image Source Choice
+// ---------------------------------------------------------------------------
+
+/// Options for the image source picker bottom sheet.
+enum ImageSourceChoice { gallery, camera, remove }

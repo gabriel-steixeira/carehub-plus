@@ -1,10 +1,9 @@
 /*
- * CareHub Plus — SOS / Escolha da tarefa
+ * CareHub Plus — SOS / Tarefa selecionada
  *
- * Lista as tarefas em aberto do perfil selecionado para a cuidadora indicar em
- * qual delas precisa de ajuda. Também é o caminho de quem chegou pelo arrastar
- * do card na tela de Tarefas: nesse caso a tarefa já vem marcada e pode ser
- * trocada aqui.
+ * Exibe somente o resumo da tarefa que motivará o alerta. Para alterá-la, a
+ * cuidadora retorna à tela de Tarefas e usa o gesto SOS no card desejado;
+ * assim o SOS não replica nem mistura a lista de tarefas no seu fluxo.
  *
  * Author: Vitoria Lana
  * Created on: 23/08/2026
@@ -13,118 +12,98 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../../../shared/widgets/app_card.dart';
+import '../../../../features/categories/domain/entities/care_category_entity.dart';
+import '../../../../features/categories/presentation/bloc/care_categories_bloc.dart';
+import '../../../../features/categories/presentation/models/category_visuals.dart';
+import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_empty_view.dart';
-import '../../../../shared/widgets/app_tinted_card.dart';
 import '../../../tasks/data/models/task_model.dart';
-import 'sos_selectable_card.dart';
 
-/// Seletor da tarefa que motiva o pedido de ajuda.
+/// Mostra a tarefa escolhida para o alerta SOS.
 class SosTaskPicker extends StatelessWidget {
   const SosTaskPicker({
     super.key,
     required this.tasks,
     required this.selectedTaskId,
-    required this.onTaskSelected,
+    required this.onChangeTask,
   });
 
   /// Tarefas em aberto do perfil atual.
   final List<TaskModel> tasks;
 
-  /// Id da tarefa marcada, se houver.
+  /// Id da tarefa escolhida pelo BLoC.
   final String? selectedTaskId;
 
-  /// Informa qual tarefa foi tocada — tocar na marcada desmarca.
-  final ValueChanged<String> onTaskSelected;
+  /// Abre Tarefas para escolher outro card pelo gesto SOS.
+  final VoidCallback onChangeTask;
 
   @override
   Widget build(BuildContext context) {
     if (tasks.isEmpty) {
       return const AppEmptyView(
-        message: 'Nenhuma tarefa em aberto para este perfil.\n'
+        message:
+            'Nenhuma tarefa em aberto para este perfil.\n'
             'Crie uma tarefa antes de pedir ajuda.',
         icon: Icons.event_available_rounded,
       );
     }
 
-    // Encontra a tarefa selecionada
-    TaskModel? selectedTask;
-    if (selectedTaskId != null) {
-      try {
-        selectedTask = tasks.firstWhere((t) => t.id == selectedTaskId);
-      } catch (e) {
-        selectedTask = null;
-      }
-    }
+    return BlocBuilder<CareCategoriesBloc, CareCategoriesState>(
+      builder: (context, categoriesState) {
+        final selectedTask = _findSelectedTask();
+        if (selectedTask == null) {
+          return const AppEmptyView(
+            message: 'Não foi possível localizar a tarefa selecionada.',
+            icon: Icons.task_alt_rounded,
+          );
+        }
 
-    // Tarefas não selecionadas
-    final otherTasks = selectedTaskId != null && selectedTask != null
-        ? tasks.where((t) => t.id != selectedTaskId).toList()
-        : (selectedTaskId == null ? tasks : tasks);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Tarefa selecionada (card destacado)
-        if (selectedTask != null) ...[
-          AppTintedCard(
-            tint: AppColors.primary,
-            padding: const EdgeInsets.all(AppSpacing.smMd),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _TaskSummary(task: selectedTask),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                _EditTaskButton(
-                  onPressed: () => onTaskSelected(selectedTask!.id),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          // Aviso de tempo médio de resposta
-          const _AverageResponseTimeCard(),
-          const SizedBox(height: AppSpacing.md),
-        ],
-        // Lista de outras tarefas para seleção
-        if (otherTasks.isNotEmpty) ...[
-          if (selectedTask != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: Text(
-                'Ou escolha outra tarefa:',
-                style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
-          for (final task in otherTasks)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: SosSelectableCard(
-                isSelected: false,
-                onTap: () => onTaskSelected(task.id),
-                child: _TaskSummary(task: task),
-              ),
-            ),
-        ],
-      ],
+        return _SelectedTaskCard(
+          task: selectedTask,
+          category: _findCategory(categoriesState.categories, selectedTask),
+          onChangeTask: onChangeTask,
+        );
+      },
     );
+  }
+
+  TaskModel? _findSelectedTask() {
+    if (selectedTaskId == null) return null;
+    for (final task in tasks) {
+      if (task.id == selectedTaskId) return task;
+    }
+    return null;
+  }
+
+  CareCategoryEntity? _findCategory(
+    List<CareCategoryEntity> categories,
+    TaskModel task,
+  ) {
+    for (final category in categories) {
+      if (category.id == task.categoryId) return category;
+    }
+    return null;
   }
 }
 
-/// Resumo de uma tarefa: horário, título e responsável.
-class _TaskSummary extends StatelessWidget {
-  const _TaskSummary({required this.task});
+/// Card da tarefa selecionada com a mesma linguagem visual dos cards de
+/// Tarefas. No SOS, a ação contextual é trocar a tarefa, não concluí-la.
+class _SelectedTaskCard extends StatelessWidget {
+  const _SelectedTaskCard({
+    required this.task,
+    required this.category,
+    required this.onChangeTask,
+  });
 
   final TaskModel task;
+  final CareCategoryEntity? category;
+  final VoidCallback onChangeTask;
 
   String get _formattedTime {
     final hour = task.scheduledTime.hour.toString().padLeft(2, '0');
@@ -132,144 +111,165 @@ class _TaskSummary extends StatelessWidget {
     return '$hour:$minute';
   }
 
+  String get _statusLabel => task.isOverdue ? 'Atrasada' : 'Pendente';
+
+  Color get _statusColor =>
+      task.isOverdue ? AppColors.error : AppColors.warning;
+
+  CareCategoryEntity get _displayCategory =>
+      category ??
+      CareCategoryEntity(
+        id: task.categoryId,
+        label: task.categoryId,
+        iconKey: 'other',
+        colorKey: 'grey',
+      );
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    final displayCategory = _displayCategory;
+    final categoryColor = colorForCategory(displayCategory);
+    final categoryIcon = iconForCategory(displayCategory);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        boxShadow: AppShadows.card,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(
-              Icons.schedule_rounded,
-              size: 16,
-              color: AppColors.primaryDark,
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            Text(
-              _formattedTime,
-              style: AppTypography.labelSmall.copyWith(
-                color: AppColors.primaryDark,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            if (task.isOverdue) ...[
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'Atrasada',
-                style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.error,
-                  fontWeight: FontWeight.w600,
+            Container(
+              width: AppSpacing.xs,
+              decoration: BoxDecoration(
+                color: categoryColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(AppSpacing.radiusLg),
+                  bottomLeft: Radius.circular(AppSpacing.radiusLg),
                 ),
               ),
-            ],
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                categoryIcon,
+                                size: AppSpacing.md,
+                                color: categoryColor,
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              Flexible(
+                                child: Text(
+                                  displayCategory.label,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.xs,
+                                ),
+                                child: Text(
+                                  '•',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                _formattedTime,
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            task.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.titleMedium.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Row(
+                            children: [
+                              const CircleAvatar(
+                                radius: AppSpacing.smMd,
+                                backgroundColor: AppColors.surfaceVariant,
+                                child: Icon(
+                                  Icons.person_outline_rounded,
+                                  size: AppSpacing.md,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Text(
+                                  'Responsável: ${task.assignedToName ?? 'Eu'}',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                const TextSpan(text: 'Status: '),
+                                TextSpan(
+                                  text: _statusLabel,
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: _statusColor,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                              style: AppTypography.labelSmall.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    AppButton(
+                      label: 'Alterar',
+                      variant: AppButtonVariant.secondary,
+                      icon: Icons.edit_outlined,
+                      fullWidth: false,
+                      onPressed: onChangeTask,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          task.title,
-          style: AppTypography.titleMedium.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          'Responsável: ${task.assignedToName ?? 'Eu'}',
-          style: AppTypography.labelSmall.copyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Botão pequenininho "Alterar" para editar a tarefa selecionada.
-class _EditTaskButton extends StatelessWidget {
-  const _EditTaskButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: const Icon(Symbols.edit_rounded, size: 16),
-      label: Text(
-        'Alterar',
-        style: AppTypography.labelSmall.copyWith(
-          color: AppColors.primary,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.primary,
-        side: const BorderSide(color: AppColors.primary, width: 1.5),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.xs,
-        ),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-    );
-  }
-}
-
-/// Card de aviso do tempo médio de resposta da rede de apoio.
-class _AverageResponseTimeCard extends StatelessWidget {
-  const _AverageResponseTimeCard();
-
-  // Tempo médio padrão em minutos. Futuramente, isso pode vir da rede de apoio.
-  static const int _defaultMinutes = 4;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      variant: AppCardVariant.filled,
-      padding: const EdgeInsets.all(AppSpacing.smMd),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.primary.withValues(alpha: 0.1),
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.schedule_rounded,
-                size: 20,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.smMd),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Tempo médio de resposta',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'da sua rede: $_defaultMinutes minutos',
-                  style: AppTypography.titleMedium.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
