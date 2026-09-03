@@ -10,7 +10,7 @@ class TasksState extends Equatable {
     this.profiles = const [],
     this.activeFilterTab = 'all', // 'all', 'today', 'completed', 'overdue'
     this.selectedProfileId = 'all',
-    this.selectedCategory,
+    this.selectedCategoryId,
     this.careRecipientId,
     this.searchQuery = '',
     this.selectedDate,
@@ -26,7 +26,7 @@ class TasksState extends Equatable {
   final List<CareRecipientModel> profiles;
   final String activeFilterTab;
   final String selectedProfileId;
-  final TaskCategory? selectedCategory;
+  final String? selectedCategoryId;
   final String? careRecipientId;
   final String searchQuery;
   final DateTime? selectedDate;
@@ -61,7 +61,7 @@ class TasksState extends Equatable {
       }
 
       // Category filter
-      if (selectedCategory != null && t.category != selectedCategory) {
+      if (selectedCategoryId != null && t.categoryId != selectedCategoryId) {
         return false;
       }
 
@@ -94,7 +94,9 @@ class TasksState extends Equatable {
     // Sorting
     list.sort((a, b) {
       if (sortOption == 'category') {
-        return a.category.label.compareTo(b.category.label);
+        // Ordena pelo id da categoria — o rótulo exibido (`CareCategoryEntity`)
+        // pertence à apresentação, e o BLoC nunca deve depender dela.
+        return a.categoryId.compareTo(b.categoryId);
       } else if (sortOption == 'status') {
         return (a.isCompleted ? 1 : 0).compareTo(b.isCompleted ? 1 : 0);
       }
@@ -111,7 +113,8 @@ class TasksState extends Equatable {
     List<CareRecipientModel>? profiles,
     String? activeFilterTab,
     String? selectedProfileId,
-    TaskCategory? selectedCategory,
+    String? selectedCategoryId,
+    bool clearSelectedCategory = false,
     String? careRecipientId,
     String? searchQuery,
     DateTime? selectedDate,
@@ -127,7 +130,9 @@ class TasksState extends Equatable {
       profiles: profiles ?? this.profiles,
       activeFilterTab: activeFilterTab ?? this.activeFilterTab,
       selectedProfileId: selectedProfileId ?? this.selectedProfileId,
-      selectedCategory: selectedCategory ?? this.selectedCategory,
+      selectedCategoryId: clearSelectedCategory
+          ? null
+          : selectedCategoryId ?? this.selectedCategoryId,
       careRecipientId: careRecipientId ?? this.careRecipientId,
       searchQuery: searchQuery ?? this.searchQuery,
       selectedDate: selectedDate ?? this.selectedDate,
@@ -146,7 +151,7 @@ class TasksState extends Equatable {
         profiles,
         activeFilterTab,
         selectedProfileId,
-        selectedCategory,
+        selectedCategoryId,
         careRecipientId,
         searchQuery,
         selectedDate,

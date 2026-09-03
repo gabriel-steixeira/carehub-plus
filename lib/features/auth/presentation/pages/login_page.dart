@@ -6,6 +6,7 @@ import '../../../../app/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../shared/widgets/app_page_frame.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../bloc/auth_bloc.dart';
 import '../widgets/login_form.dart';
@@ -29,17 +30,18 @@ class _LoginView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: BlocListener<AuthBloc, AuthState>(
-        listener: (context, state) {
-          if (state.status == AuthStatus.success) {
-            context.go(AppRoutes.home);
-          }
-        },
-        child: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: const BoxDecoration(gradient: AppColors.splashGradient),
-          child: SafeArea(
+      backgroundColor: AppColors.background,
+      body: AppPageFrame(
+        child: BlocListener<AuthBloc, AuthState>(
+          listener: (context, state) {
+            if (state.status == AuthStatus.success) {
+              context.go(AppRoutes.home);
+            }
+          },
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(gradient: AppColors.splashGradient),
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Column(

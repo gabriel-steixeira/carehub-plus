@@ -35,14 +35,16 @@ class AuthSignUpSubmitted extends AuthEvent {
     required this.name,
     required this.email,
     required this.password,
+    this.imageFile,
   });
 
   final String name;
   final String email;
   final String password;
+  final File? imageFile;
 
   @override
-  List<Object?> get props => [name, email, password];
+  List<Object?> get props => [name, email, password, imageFile];
 }
 
 /// Requested password reset email.

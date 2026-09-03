@@ -63,7 +63,7 @@ class SessionExpiredBottomSheet extends StatelessWidget {
               // Title
               Text(
                 'Sessão Expirada',
-                style: AppTypography.headlineMedium.copyWith(
+                style: AppTypography.averiaHeadlineMedium.copyWith(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),

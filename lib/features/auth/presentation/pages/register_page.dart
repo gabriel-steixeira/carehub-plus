@@ -6,6 +6,9 @@ import '../../../../app/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/app_responsive.dart';
+import '../../../../shared/widgets/app_header.dart';
+import '../../../../shared/widgets/app_page_frame.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../bloc/auth_bloc.dart';
 import '../widgets/register_form.dart';
@@ -43,77 +46,79 @@ class _RegisterView extends StatelessWidget {
             context.go(AppRoutes.login);
           }
         },
-        child: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: const BoxDecoration(gradient: AppColors.splashGradient),
-          child: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: AppSpacing.xxl),
-
-                  // Logo (same as login)
-                  Center(child: _buildLogo()),
-
-                  const SizedBox(height: AppSpacing.xxl),
-
-                  // Title and subtitle
-                  Text(
-                    'Crie sua conta',
-                    style: AppTypography.displayLarge.copyWith(
-                      color: AppColors.textPrimary,
+        child: AppPageFrame(
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(gradient: AppColors.splashGradient),
+            child: Column(
+              children: [
+                const AppHeader(showProfile: false, showSettings: false),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Preencha os detalhes abaixo para começar.',
-                    style: AppTypography.bodyLarge.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: context.scaleSpacing(AppSpacing.lg)),
 
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // Register card
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.06),
-                          blurRadius: 24,
-                          offset: const Offset(0, 8),
+                        // Title and subtitle
+                        Text(
+                          'Crie sua conta',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.averiaTitleLarge.copyWith(
+                            color: AppColors.textPrimary,
+                            fontSize: context.scaleFont(32),
+                          ),
                         ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          'Preencha os detalhes abaixo para começar.',
+                          style: AppTypography.bodyLarge.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+
+                        const SizedBox(height: AppSpacing.lg),
+
+                        // Register card
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: BorderRadius.circular(
+                              AppSpacing.radiusXl,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(
+                                  alpha: 0.06,
+                                ),
+                                blurRadius: 24,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: const RegisterForm(),
+                        ),
+
+                        const SizedBox(height: AppSpacing.xl),
+
+                        // Login link (outside/below the card)
+                        const _LoginLink(),
+
+                        const SizedBox(height: AppSpacing.xl),
                       ],
                     ),
-                    child: const RegisterForm(),
                   ),
-
-                  const SizedBox(height: AppSpacing.xl),
-
-                  // Login link (outside/below the card)
-                  const _LoginLink(),
-
-                  const SizedBox(height: AppSpacing.xl),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildLogo() {
-    return Image.asset(
-      'assets/images/logo_oficial.png',
-      width: 300,
-      fit: BoxFit.contain,
     );
   }
 }

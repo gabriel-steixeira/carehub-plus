@@ -1,55 +1,86 @@
+/*
+ * CareHub Plus — SOS / Página
+ *
+ * Tela de pedido de ajuda à rede de apoio. Aqui só há composição: cabeçalho,
+ * conteúdo da etapa atual do fluxo e navegação inferior. Qual etapa aparece é
+ * decisão do `SosBloc`, então a página não guarda nenhuma regra.
+ *
+ * Author: Vitoria Lana
+ * Created on: 23/08/2026
+ * Version: 1.0.0
+ * Squad: CareHub Plus
+ */
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../features/categories/data/repositories/care_categories_repository.dart';
+import '../../../../features/categories/presentation/bloc/care_categories_bloc.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
 import '../../../../shared/widgets/app_error_view.dart';
+import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_loading.dart';
+import '../../../../shared/widgets/app_page_frame.dart';
 import '../../data/repositories/sos_repository.dart';
 import '../bloc/sos_bloc.dart';
-import '../widgets/emergency_contact_tile.dart';
-import '../widgets/protocol_card.dart';
-import '../widgets/sos_button.dart';
+import '../models/sos_request_args.dart';
+import '../widgets/sos_accepted_view.dart';
+import '../widgets/sos_alerting_view.dart';
+import '../widgets/sos_compose_view.dart';
 
-/// Main SOS Emergency Page.
+/// Tela de SOS / pedido de ajuda à rede de apoio.
 class SosPage extends StatelessWidget {
-  const SosPage({super.key});
+  const SosPage({super.key, this.args});
+
+  /// Pré-seleção vinda de outra tela (ex.: arrastar um card em Tarefas).
+  final SosRequestArgs? args;
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => SosBloc(
-        repository: SosRepository(),
-      )..add(const SosLoadEvent()),
-      child: const SosView(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => SosBloc(repository: SosRepository())
+            ..add(
+              SosLoadEvent(
+                careRecipientId: args?.careRecipientId,
+                taskId: args?.taskId,
+              ),
+            ),
+        ),
+        BlocProvider(
+          create: (context) =>
+              CareCategoriesBloc(repository: CareCategoriesRepository())
+                ..add(const CareCategoriesLoadEvent()),
+        ),
+      ],
+      child: SosView(args: args),
     );
   }
 }
 
 class SosView extends StatelessWidget {
-  const SosView({super.key});
+  const SosView({super.key, this.args});
+
+  /// Mantém a pré-seleção original ao tentar carregar a tela novamente.
+  final SosRequestArgs? args;
 
   void _onBottomNavTap(BuildContext context, int index) {
     switch (index) {
       case 0:
         context.go(AppRoutes.dashboard);
-        break;
       case 1:
         context.push(AppRoutes.tasks);
-        break;
       case 2:
         context.push(AppRoutes.coraChat);
-        break;
       case 3:
         context.push(AppRoutes.chat);
-        break;
       case 4:
-        // Already on SOS
+        // Já estamos no SOS.
         break;
     }
   }
@@ -58,130 +89,59 @@ class SosView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          'SOS & Emergências',
-          style: AppTypography.titleLarge.copyWith(
-            color: AppColors.error,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      body: SafeArea(
-        child: BlocBuilder<SosBloc, SosState>(
-          builder: (context, state) {
-            if ((state.status == SosStatus.loading ||
-                    state.status == SosStatus.initial) &&
-                state.contacts.isEmpty) {
-              return const AppLoading();
-            }
-
-            if (state.status == SosStatus.failure && state.contacts.isEmpty) {
-              return AppErrorView(
-                message:
-                    state.errorMessage ?? 'Erro ao carregar o SOS de emergência.',
-                onRetry: () {
-                  context.read<SosBloc>().add(const SosLoadEvent());
-                },
-              );
-            }
-
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                children: [
-                  const SizedBox(height: AppSpacing.sm),
-
-                  // Panic SOS Button
-                  SosButton(
-                    isTriggered: state.alertTriggered,
-                    onPressed: () {
-                      if (state.alertTriggered) {
-                        context.read<SosBloc>().add(const SosCancelAlertEvent());
-                      } else {
-                        context
-                            .read<SosBloc>()
-                            .add(const SosTriggerAlertEvent());
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '🚨 ALERTA DISPARADO PARA A REDE DE APOIO!',
-                              style: AppTypography.titleMedium
-                                  .copyWith(color: Colors.white),
-                            ),
-                            backgroundColor: AppColors.error,
-                            duration: const Duration(seconds: 4),
+      body: AppPageFrame(
+        child: Column(
+          children: [
+            BlocSelector<SosBloc, SosState, String?>(
+              selector: (state) => state.caregiverPhotoUrl,
+              builder: (context, photoUrl) => AppHeader(photoUrl: photoUrl),
+            ),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: AppColors.splashGradient,
+                ),
+                child: BlocConsumer<SosBloc, SosState>(
+                  // Erro pontual (falha ao disparar ou cancelar) aparece em
+                  // snackbar para não apagar as escolhas já feitas na tela.
+                  listenWhen: (previous, current) =>
+                      current.status == SosStatus.ready &&
+                      current.errorMessage != null &&
+                      previous.errorMessage != current.errorMessage,
+                  listener: (context, state) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          state.errorMessage!,
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.textInverse,
                           ),
-                        );
-                      }
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-
-                  // Emergency Contacts Section
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Serviços e Contatos de Emergência',
-                      style: AppTypography.titleLarge.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.bold,
+                        ),
+                        backgroundColor: AppColors.error,
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-
-                  ...state.contacts.map((contact) {
-                    return EmergencyContactTile(
-                      contact: contact,
-                      onCall: () async {
-                        final cleanPhone =
-                            contact.phone.replaceAll(RegExp(r'[^\d+]'), '');
-                        final Uri uri = Uri.parse('tel:$cleanPhone');
-                        try {
-                          await launchUrl(uri);
-                        } catch (_) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Iniciando chamada para ${contact.name} (${contact.phone})...',
-                                  style: AppTypography.bodyMedium
-                                      .copyWith(color: Colors.white),
-                                ),
-                                backgroundColor: AppColors.primary,
-                              ),
-                            );
-                          }
-                        }
-                      },
                     );
-                  }),
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // First-Aid Protocols Section
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Instruções de Primeiros Socorros',
-                      style: AppTypography.titleLarge.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.bold,
+                  },
+                  builder: (context, state) => switch (state.status) {
+                    SosStatus.initial ||
+                    SosStatus.loading => const AppLoading(),
+                    SosStatus.failure => AppErrorView(
+                      message:
+                          state.errorMessage ??
+                          'Erro ao carregar o pedido de ajuda.',
+                      onRetry: () => context.read<SosBloc>().add(
+                        SosLoadEvent(
+                          careRecipientId: args?.careRecipientId,
+                          taskId: args?.taskId,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-
-                  ...state.protocols.map((protocol) {
-                    return ProtocolCard(protocol: protocol);
-                  }),
-                ],
+                    SosStatus.ready => _SosPhaseView(state: state),
+                  },
+                ),
               ),
-            );
-          },
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: AppBottomNavigation(
@@ -189,5 +149,21 @@ class SosView extends StatelessWidget {
         onTap: (index) => _onBottomNavTap(context, index),
       ),
     );
+  }
+}
+
+/// Escolhe o conteúdo conforme a etapa do pedido de ajuda.
+class _SosPhaseView extends StatelessWidget {
+  const _SosPhaseView({required this.state});
+
+  final SosState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (state.phase) {
+      SosPhase.composing => SosComposeView(state: state),
+      SosPhase.alerting => SosAlertingView(state: state),
+      SosPhase.accepted => SosAcceptedView(state: state),
+    };
   }
 }

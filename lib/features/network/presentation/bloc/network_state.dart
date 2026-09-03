@@ -8,6 +8,8 @@ class NetworkState extends Equatable {
     this.members = const [],
     this.isAddingMember = false,
     this.addSuccess = false,
+    this.isUpdatingMember = false,
+    this.updateSuccess = false,
     this.errorMessage,
   });
 
@@ -15,6 +17,8 @@ class NetworkState extends Equatable {
   final List<NetworkMemberModel> members;
   final bool isAddingMember;
   final bool addSuccess;
+  final bool isUpdatingMember;
+  final bool updateSuccess;
   final String? errorMessage;
 
   NetworkState copyWith({
@@ -22,6 +26,8 @@ class NetworkState extends Equatable {
     List<NetworkMemberModel>? members,
     bool? isAddingMember,
     bool? addSuccess,
+    bool? isUpdatingMember,
+    bool? updateSuccess,
     String? errorMessage,
   }) {
     return NetworkState(
@@ -29,11 +35,20 @@ class NetworkState extends Equatable {
       members: members ?? this.members,
       isAddingMember: isAddingMember ?? this.isAddingMember,
       addSuccess: addSuccess ?? this.addSuccess,
+      isUpdatingMember: isUpdatingMember ?? this.isUpdatingMember,
+      updateSuccess: updateSuccess ?? this.updateSuccess,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [status, members, isAddingMember, addSuccess, errorMessage];
+  List<Object?> get props => [
+        status,
+        members,
+        isAddingMember,
+        addSuccess,
+        isUpdatingMember,
+        updateSuccess,
+        errorMessage,
+      ];
 }

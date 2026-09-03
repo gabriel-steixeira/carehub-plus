@@ -8,6 +8,7 @@ class CareRecipientModel extends Equatable {
     required this.id,
     required this.name,
     this.photoUrl,
+    this.photoBase64,
     this.unreadNotificationsCount = 0,
     this.type = 'person',
     this.dateOfBirth,
@@ -16,7 +17,13 @@ class CareRecipientModel extends Equatable {
 
   final String id;
   final String name;
+
+  /// URL-based photo (e.g. from Google Sign-In or external source).
   final String? photoUrl;
+
+  /// Base64-encoded photo stored directly in Firestore.
+  final String? photoBase64;
+
   final int unreadNotificationsCount;
 
   /// Legacy string type ('person' or 'pet') — kept for backwards compat.
@@ -28,12 +35,16 @@ class CareRecipientModel extends Equatable {
   /// Optional date of birth.
   final DateTime? dateOfBirth;
 
+  /// Returns true if this profile has any photo (URL or base64).
+  bool get hasPhoto => photoUrl != null || photoBase64 != null;
+
   /// Creates a CareRecipientModel from a JSON map.
   factory CareRecipientModel.fromJson(Map<String, dynamic> json) {
     return CareRecipientModel(
       id: json['id'] as String,
       name: json['name'] as String,
       photoUrl: json['photoUrl'] as String?,
+      photoBase64: json['photoBase64'] as String?,
       unreadNotificationsCount: json['unreadNotificationsCount'] as int? ?? 0,
       type: json['type'] as String? ?? 'person',
       recipientType: json['recipientType'] != null
@@ -51,6 +62,7 @@ class CareRecipientModel extends Equatable {
       'id': id,
       'name': name,
       'photoUrl': photoUrl,
+      'photoBase64': photoBase64,
       'unreadNotificationsCount': unreadNotificationsCount,
       'type': type,
       'recipientType': recipientType?.value,
@@ -63,6 +75,7 @@ class CareRecipientModel extends Equatable {
     String? id,
     String? name,
     String? photoUrl,
+    String? photoBase64,
     int? unreadNotificationsCount,
     String? type,
     CareRecipientType? recipientType,
@@ -72,6 +85,7 @@ class CareRecipientModel extends Equatable {
       id: id ?? this.id,
       name: name ?? this.name,
       photoUrl: photoUrl ?? this.photoUrl,
+      photoBase64: photoBase64 ?? this.photoBase64,
       unreadNotificationsCount:
           unreadNotificationsCount ?? this.unreadNotificationsCount,
       type: type ?? this.type,
@@ -85,6 +99,7 @@ class CareRecipientModel extends Equatable {
         id,
         name,
         photoUrl,
+        photoBase64,
         unreadNotificationsCount,
         type,
         recipientType,

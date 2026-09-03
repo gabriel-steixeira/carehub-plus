@@ -1,97 +1,129 @@
-import 'package:flutter/material.dart';
+/*
+ * CareHub Plus — Dados SOS / Repositório de pedidos de ajuda
+ *
+ * Porta de entrada única de dados da tela de SOS. A tela precisa juntar coisas
+ * que vivem em três features diferentes (perfis cuidados, tarefas e rede de
+ * apoio) e ainda disparar o alerta. Em vez de injetar quatro dependências no
+ * BLoC, este repositório funciona como uma fachada (padrão Facade): o BLoC
+ * conhece só ele, e os testes precisam simular só ele.
+ *
+ * Author: Vitoria Lana
+ * Created on: 23/08/2026
+ * Version: 1.0.0
+ * Squad: CareHub Plus
+ */
 
-import '../models/emergency_contact_model.dart';
-import '../models/sos_protocol_model.dart';
+import 'dart:math';
 
-/// Repository for SOS emergency actions and protocols.
+import '../../../../core/errors/app_exception.dart';
+import '../../../assistants/data/repositories/caregiver_avatar_repository.dart';
+import '../../../home/data/models/care_recipient_model.dart';
+import '../../../home/data/repositories/home_repository.dart';
+import '../../../network/data/models/network_member_model.dart';
+import '../../../network/data/repositories/network_repository.dart';
+import '../../../tasks/data/models/task_model.dart';
+import '../../../tasks/data/repositories/tasks_repository.dart';
+import '../../domain/entities/sos_acceptance_entity.dart';
+import '../../domain/entities/sos_help_request_entity.dart';
+
+/// Fachada de dados do SOS: leitura da tela e ciclo de vida do alerta.
 class SosRepository {
-  final List<EmergencyContactModel> _contacts = const [
-    EmergencyContactModel(
-      id: 'samu',
-      name: 'SAMU - Serviço de Emergência',
-      phone: '192',
-      relationship: 'Serviço Público de Saúde',
-      isPrimary: true,
-      isService: true,
-    ),
-    EmergencyContactModel(
-      id: 'bombeiros',
-      name: 'Corpo de Bombeiros',
-      phone: '193',
-      relationship: 'Resgate e Emergência',
-      isPrimary: false,
-      isService: true,
-    ),
-    EmergencyContactModel(
-      id: 'carlos_family',
-      name: 'Carlos (Filho)',
-      phone: '(11) 99887-6655',
-      relationship: 'Contato Familiar Principal',
-      isPrimary: true,
-      isService: false,
-    ),
-    EmergencyContactModel(
-      id: 'dr_roberto',
-      name: 'Dr. Roberto (Cardiologista)',
-      phone: '(11) 91234-5678',
-      relationship: 'Médico Responsável',
-      isPrimary: false,
-      isService: false,
-    ),
-  ];
+  SosRepository({
+    HomeRepository? homeRepository,
+    TasksRepository? tasksRepository,
+    NetworkRepository? networkRepository,
+    CaregiverAvatarRepository? caregiverAvatarRepository,
+    Random? random,
+  }) : _homeRepository = homeRepository ?? HomeRepository(),
+       _tasksRepository = tasksRepository ?? TasksRepository(),
+       _networkRepository = networkRepository ?? NetworkRepository(),
+       _caregiverAvatarRepository =
+           caregiverAvatarRepository ?? CaregiverAvatarRepository(),
+       _random = random ?? Random();
 
-  final List<SosProtocolModel> _protocols = const [
-    SosProtocolModel(
-      id: 'proto_fall',
-      title: 'Quedas e Impacto',
-      description: 'Como agir caso o idoso ou assistido sofra uma queda.',
-      icon: Icons.personal_injury_outlined,
-      steps: [
-        '1. Não mova a pessoa imediatamente. Verifique se há dor de cabeça ou no pescoço.',
-        '2. Pergunte se há tontura ou perda de consciência.',
-        '3. Se houver suspeita de fratura, mantenha a pessoa imóvel e chame o SAMU (192).',
-        '4. Caso esteja consciente e sem dores agudas, ajude a sentar devagar.',
-      ],
-    ),
-    SosProtocolModel(
-      id: 'proto_heart',
-      title: 'Suspeita de Infarto',
-      description: 'Sinais de dor no peito ou falta de ar aguda.',
-      icon: Icons.favorite_border_rounded,
-      steps: [
-        '1. Mantenha a pessoa sentada e calma em local arejado.',
-        '2. Afrouxe roupas apertadas na região do pescoço e tórax.',
-        '3. Ligue imediatamente para o SAMU (192).',
-        '4. Nunca ofereça alimentos ou bebidas durante o atendimento.',
-      ],
-    ),
-    SosProtocolModel(
-      id: 'proto_choking',
-      title: 'Engasgo e Obstrução',
-      description: 'Manobra de desobstrução de vias aéreas.',
-      icon: Icons.air_outlined,
-      steps: [
-        '1. Incline a pessoa levemente para a frente.',
-        '2. Aplique até 5 pancadas firmes nas costas entre as escápulas.',
-        '3. Se persistir, posicionar-se atrás e realizar compressões abdominais (Manobra de Heimlich).',
-        '4. Ligue para o SAMU (192) se a obstrução persistir.',
-      ],
-    ),
-  ];
+  final HomeRepository _homeRepository;
+  final TasksRepository _tasksRepository;
+  final NetworkRepository _networkRepository;
+  final CaregiverAvatarRepository _caregiverAvatarRepository;
+  final Random _random;
 
-  Future<List<EmergencyContactModel>> fetchContacts() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    return _contacts;
+  /// Tempo que a cuidadora tem para cancelar o alerta antes de a rede
+  /// responder. Vive aqui, e não na interface, porque é regra do fluxo.
+  static const Duration cancellationWindow = Duration(seconds: 10);
+
+  /// Faixa de tempo estimado de chegada sorteada no MVP (em minutos).
+  static const int _minEtaMinutes = 3;
+  static const int _maxEtaMinutes = 9;
+
+  /// Foto do cuidador autenticado para o cabeçalho. `null` quando a conta não
+  /// tem foto — nesse caso o `AppHeader` mostra o avatar genérico.
+  Future<String?> fetchCaregiverPhotoUrl() =>
+      _caregiverAvatarRepository.fetchPhotoUrl();
+
+  /// Perfis cuidados disponíveis para o filtro do topo da tela.
+  Future<List<CareRecipientModel>> fetchProfiles() =>
+      _homeRepository.fetchCareRecipients();
+
+  /// Membros da rede de apoio que podem ser acionados.
+  Future<List<NetworkMemberModel>> fetchSupportNetwork({
+    String? careRecipientId,
+  }) => _networkRepository.fetchMembers(careRecipientId: careRecipientId);
+
+  /// Tarefas ainda em aberto do perfil selecionado — só elas fazem sentido
+  /// como motivo de um pedido de ajuda.
+  Future<List<TaskModel>> fetchOpenTasks({
+    required String careRecipientId,
+  }) async {
+    final tasks = await _tasksRepository.fetchTasks(
+      careRecipientId: careRecipientId,
+    );
+    return tasks.where((task) => !task.isCompleted).toList();
   }
 
-  Future<List<SosProtocolModel>> fetchProtocols() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    return _protocols;
+  /// Registra o pedido de ajuda e devolve o id do alerta criado.
+  ///
+  /// **MVP:** o envio é simulado. Notificação real (push/SMS) depende de
+  /// Firebase Cloud Messaging, que ainda não está no projeto; quando entrar,
+  /// só este método muda — BLoC e telas continuam iguais.
+  Future<String> notifySupportNetwork(SosHelpRequestEntity request) async {
+    if (!request.isValid) {
+      throw const AppException(
+        'Escolha uma tarefa e pelo menos uma pessoa da rede de apoio.',
+      );
+    }
+
+    return 'sos_${DateTime.now().millisecondsSinceEpoch}';
   }
 
-  Future<bool> triggerEmergencyAlert({required String location}) async {
-    // Simulates sending an urgent SMS / push alert to all network members
-    await Future.delayed(const Duration(milliseconds: 1000));
-    return true;
+  /// Sorteia quem da rede de apoio aceitou o chamado.
+  ///
+  /// **MVP:** sem backend para receber o aceite de verdade, um dos avisados é
+  /// escolhido aleatoriamente quando a janela de cancelamento termina.
+  Future<SosAcceptanceEntity> drawAcceptance(
+    SosHelpRequestEntity request,
+  ) async {
+    if (request.notifiedMemberIds.isEmpty) {
+      throw const AppException(
+        'Nenhuma pessoa da rede de apoio foi avisada neste alerta.',
+      );
+    }
+
+    final memberId = request
+        .notifiedMemberIds[_random.nextInt(request.notifiedMemberIds.length)];
+    final etaMinutes =
+        _minEtaMinutes + _random.nextInt(_maxEtaMinutes - _minEtaMinutes);
+
+    return SosAcceptanceEntity(memberId: memberId, etaMinutes: etaMinutes);
+  }
+
+  /// Cancela um alerta em andamento.
+  ///
+  /// **MVP:** nada é persistido ainda, então o cancelamento só encerra o
+  /// pedido em memória. Mantido como método para o cancelamento ter um único
+  /// lugar quando o backend existir.
+  Future<void> cancelAlert(String alertId) async {
+    if (alertId.isEmpty) {
+      throw const AppException('Não há alerta em andamento para cancelar.');
+    }
   }
 }

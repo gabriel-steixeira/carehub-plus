@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -6,10 +7,18 @@ import '../../core/theme/app_typography.dart';
 
 /// App-wide bottom navigation bar.
 class AppBottomNavigation extends StatelessWidget {
-  const AppBottomNavigation({super.key, this.currentIndex = 0, this.onTap});
+  const AppBottomNavigation({
+    super.key,
+    this.currentIndex = 0,
+    this.onTap,
+    this.chatBadgeCount = 0,
+  });
 
   final int currentIndex;
   final ValueChanged<int>? onTap;
+
+  /// Quantidade de chats não lidos exibida no badge do item Chat.
+  final int chatBadgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -39,28 +48,28 @@ class AppBottomNavigation extends StatelessWidget {
             children: [
               _buildItem(
                 index: 0,
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home,
+                icon: Symbols.home_rounded,
+                activeIcon: Symbols.home_rounded,
                 label: 'Início',
               ),
               _buildItem(
                 index: 1,
-                icon: Icons.assignment_outlined,
-                activeIcon: Icons.assignment,
+                icon: Symbols.select_check_box_rounded,
+                activeIcon: Symbols.select_check_box_rounded,
                 label: 'Tarefas',
               ),
               _buildCoraButton(index: 2),
               _buildItem(
                 index: 3,
-                icon: Icons.chat_bubble_outline_rounded,
-                activeIcon: Icons.chat_bubble_rounded,
+                icon: Symbols.chat_bubble_rounded,
+                activeIcon: Symbols.chat_bubble_rounded,
                 label: 'Chat',
-                badgeCount: 1,
+                badgeCount: chatBadgeCount,
               ),
               _buildItem(
                 index: 4,
-                icon: Icons.health_and_safety_outlined,
-                activeIcon: Icons.health_and_safety,
+                icon: Symbols.shield_with_heart_rounded,
+                activeIcon: Symbols.shield_with_heart_rounded,
                 label: 'SOS',
               ),
             ],
@@ -90,7 +99,12 @@ class AppBottomNavigation extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(isActive ? activeIcon : icon, color: color, size: 24),
+                Icon(
+                  isActive ? activeIcon : icon,
+                  color: color,
+                  size: 24,
+                  fill: isActive ? 1.0 : 0.0,
+                ),
                 if (badgeCount > 0)
                   Positioned(
                     top: -4,
@@ -107,10 +121,13 @@ class AppBottomNavigation extends StatelessWidget {
                       ),
                       child: Text(
                         '$badgeCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
+                        style: AppTypography.resolve(
+                          text: '$badgeCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -121,10 +138,13 @@ class AppBottomNavigation extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               label,
-              style: AppTypography.labelSmall.copyWith(
-                color: color,
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+              style: AppTypography.resolve(
+                text: label,
+                style: AppTypography.labelSmall.copyWith(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -172,10 +192,13 @@ class AppBottomNavigation extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               'Cora',
-              style: AppTypography.labelSmall.copyWith(
-                color: color,
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+              style: AppTypography.resolve(
+                text: 'Cora',
+                style: AppTypography.labelSmall.copyWith(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+                ),
               ),
             ),
           ],
