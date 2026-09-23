@@ -28,6 +28,8 @@ class MessageBubble extends StatelessWidget {
     required this.message,
     required this.accentColor,
     this.senderAvatarUrl,
+    this.caregiverAvatarUrl,
+    this.caregiverAvatarBase64,
   });
 
   final ChatMessageModel message;
@@ -39,9 +41,24 @@ class MessageBubble extends StatelessWidget {
   /// Foto de quem enviou, quando a mensagem não é do cuidador logado.
   final String? senderAvatarUrl;
 
+  /// Foto do cuidador logado (URL), usada quando a mensagem é dele próprio.
+  final String? caregiverAvatarUrl;
+
+  /// Foto do cuidador logado (base64), usada quando não há URL disponível.
+  final String? caregiverAvatarBase64;
+
   String get _time {
     final t = message.timestamp;
     return '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+  }
+
+  /// Retorna a foto do cuidador, priorizando a URL, mas usando base64 como
+  /// fallback se necessário.
+  String? get _caregiverPhoto {
+    if (caregiverAvatarUrl != null && caregiverAvatarUrl!.isNotEmpty) {
+      return caregiverAvatarUrl;
+    }
+    return caregiverAvatarBase64;
   }
 
   @override
@@ -150,7 +167,7 @@ class MessageBubble extends StatelessWidget {
           ),
           if (isMe) ...[
             const SizedBox(width: AppSpacing.xs),
-            const AppChatAvatar.photo(),
+            AppChatAvatar.photo(photoUrl: _caregiverPhoto),
           ],
         ],
       ),

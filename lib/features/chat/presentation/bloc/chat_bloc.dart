@@ -53,6 +53,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           rooms: rooms,
           profiles: profiles,
           caregiverPhotoUrl: caregiver.photoUrl,
+          caregiverPhotoBase64: caregiver.photoBase64,
           careRecipientId: selectedProfileId,
           selectedProfileName: selectedProfile?.name,
         ),
@@ -107,8 +108,22 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       state.copyWith(activeRoomId: event.roomId, status: ChatStatus.loading),
     );
     try {
-      final messages = await _repository.fetchMessages(event.roomId);
-      emit(state.copyWith(status: ChatStatus.success, messages: messages));
+      // Carrega a foto do cuidador se ainda não foi carregada
+      if (state.caregiverPhotoUrl == null && state.caregiverPhotoBase64 == null) {
+        final caregiver = await _homeRepository.fetchCaregiver();
+        final messages = await _repository.fetchMessages(event.roomId);
+        emit(
+          state.copyWith(
+            status: ChatStatus.success,
+            messages: messages,
+            caregiverPhotoUrl: caregiver.photoUrl,
+            caregiverPhotoBase64: caregiver.photoBase64,
+          ),
+        );
+      } else {
+        final messages = await _repository.fetchMessages(event.roomId);
+        emit(state.copyWith(status: ChatStatus.success, messages: messages));
+      }
     } catch (e) {
       emit(
         state.copyWith(status: ChatStatus.failure, errorMessage: e.toString()),

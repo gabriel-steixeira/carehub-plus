@@ -10,6 +10,7 @@ class ChatState extends Equatable {
     this.rooms = const [],
     this.profiles = const [],
     this.caregiverPhotoUrl,
+    this.caregiverPhotoBase64,
     this.activeRoomId,
     this.messages = const [],
     this.isSending = false,
@@ -33,6 +34,9 @@ class ChatState extends Equatable {
   /// Foto do cuidador logado — usada no `AppHeader` e no avatar das próprias
   /// mensagens dentro de uma sala.
   final String? caregiverPhotoUrl;
+
+  /// Foto em base64 do cuidador logado, usada quando não há URL disponível.
+  final String? caregiverPhotoBase64;
   final String? activeRoomId;
   final List<ChatMessageModel> messages;
   final bool isSending;
@@ -114,6 +118,7 @@ class ChatState extends Equatable {
     List<ChatRoomModel>? rooms,
     List<CareRecipientModel>? profiles,
     String? caregiverPhotoUrl,
+    String? caregiverPhotoBase64,
     String? activeRoomId,
     List<ChatMessageModel>? messages,
     bool? isSending,
@@ -132,6 +137,7 @@ class ChatState extends Equatable {
       rooms: rooms ?? this.rooms,
       profiles: profiles ?? this.profiles,
       caregiverPhotoUrl: caregiverPhotoUrl ?? this.caregiverPhotoUrl,
+      caregiverPhotoBase64: caregiverPhotoBase64 ?? this.caregiverPhotoBase64,
       activeRoomId: activeRoomId ?? this.activeRoomId,
       messages: messages ?? this.messages,
       isSending: isSending ?? this.isSending,
@@ -155,6 +161,7 @@ class ChatState extends Equatable {
     rooms,
     profiles,
     caregiverPhotoUrl,
+    caregiverPhotoBase64,
     activeRoomId,
     messages,
     isSending,

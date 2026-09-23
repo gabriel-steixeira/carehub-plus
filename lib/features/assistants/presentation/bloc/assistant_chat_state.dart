@@ -9,6 +9,7 @@ class AssistantChatState extends Equatable {
     this.isThinking = false,
     this.errorMessage,
     this.caregiverPhotoUrl,
+    this.caregiverPhotoBase64,
   });
 
   final AssistantChatStatus status;
@@ -22,10 +23,13 @@ class AssistantChatState extends Equatable {
   /// Motivo da última falha, ou `null` quando não há erro pendente.
   final String? errorMessage;
 
-  /// Foto do cuidador logado, usada no cabeçalho e nas bolhas dele.
+  /// Foto do cuidador logado (URL), usada no cabeçalho e nas bolhas dele.
   ///
-  /// `null` quando a conta não tem foto: a interface cai no avatar genérico.
+  /// `null` quando a conta não tem foto URL: a interface tenta o base64.
   final String? caregiverPhotoUrl;
+
+  /// Foto do cuidador logado (base64), usada quando não há URL disponível.
+  final String? caregiverPhotoBase64;
 
   /// `true` quando a tela já tem conversa para exibir.
   bool get hasMessages => messages.isNotEmpty;
@@ -42,6 +46,7 @@ class AssistantChatState extends Equatable {
     String? errorMessage,
     bool clearErrorMessage = false,
     String? caregiverPhotoUrl,
+    String? caregiverPhotoBase64,
   }) {
     return AssistantChatState(
       status: status ?? this.status,
@@ -51,6 +56,7 @@ class AssistantChatState extends Equatable {
           ? null
           : (errorMessage ?? this.errorMessage),
       caregiverPhotoUrl: caregiverPhotoUrl ?? this.caregiverPhotoUrl,
+      caregiverPhotoBase64: caregiverPhotoBase64 ?? this.caregiverPhotoBase64,
     );
   }
 
@@ -61,5 +67,6 @@ class AssistantChatState extends Equatable {
     isThinking,
     errorMessage,
     caregiverPhotoUrl,
+    caregiverPhotoBase64,
   ];
 }

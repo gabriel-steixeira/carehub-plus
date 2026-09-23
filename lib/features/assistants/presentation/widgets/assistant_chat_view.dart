@@ -129,10 +129,15 @@ class _AssistantChatViewState extends State<AssistantChatView> {
           children: [
             // BlocSelector em vez de BlocBuilder: o cabeçalho só reconstrói
             // quando a foto muda, e não a cada mensagem da conversa.
-            BlocSelector<AssistantChatBloc, AssistantChatState, String?>(
-              selector: (state) => state.caregiverPhotoUrl,
-              builder: (context, caregiverPhotoUrl) =>
-                  AppHeader(photoUrl: caregiverPhotoUrl),
+            BlocSelector<AssistantChatBloc, AssistantChatState, ({String? photoUrl, String? photoBase64})>(
+              selector: (state) => (
+                photoUrl: state.caregiverPhotoUrl,
+                photoBase64: state.caregiverPhotoBase64,
+              ),
+              builder: (context, photo) => AppHeader(
+                photoUrl: photo.photoUrl,
+                photoBase64: photo.photoBase64,
+              ),
             ),
             Expanded(
               child: DecoratedBox(
@@ -251,6 +256,7 @@ class _AssistantChatViewState extends State<AssistantChatView> {
               message: state.messages[index],
               profile: profile,
               caregiverPhotoUrl: state.caregiverPhotoUrl,
+              caregiverPhotoBase64: state.caregiverPhotoBase64,
               onQuickReplyTap: _sendQuickReply,
             );
           },

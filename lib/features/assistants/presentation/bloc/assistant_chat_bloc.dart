@@ -54,7 +54,7 @@ class AssistantChatBloc extends Bloc<AssistantChatEvent, AssistantChatState> {
     // A foto é carregada junto da abertura, mas de forma independente: ela
     // aparece no cabeçalho e nas bolhas do cuidador, e a ausência dela não
     // impede a conversa.
-    final caregiverPhotoUrl = await _loadCaregiverPhotoUrl();
+    final caregiverPhoto = await _loadCaregiverPhoto();
 
     try {
       final messages = await _repository.fetchInitialMessages();
@@ -62,7 +62,8 @@ class AssistantChatBloc extends Bloc<AssistantChatEvent, AssistantChatState> {
         state.copyWith(
           status: AssistantChatStatus.success,
           messages: messages,
-          caregiverPhotoUrl: caregiverPhotoUrl,
+          caregiverPhotoUrl: caregiverPhoto.photoUrl,
+          caregiverPhotoBase64: caregiverPhoto.photoBase64,
         ),
       );
     } on AppException catch (e) {
@@ -70,7 +71,8 @@ class AssistantChatBloc extends Bloc<AssistantChatEvent, AssistantChatState> {
         state.copyWith(
           status: AssistantChatStatus.failure,
           errorMessage: e.message,
-          caregiverPhotoUrl: caregiverPhotoUrl,
+          caregiverPhotoUrl: caregiverPhoto.photoUrl,
+          caregiverPhotoBase64: caregiverPhoto.photoBase64,
         ),
       );
     } catch (_) {
@@ -78,7 +80,8 @@ class AssistantChatBloc extends Bloc<AssistantChatEvent, AssistantChatState> {
         state.copyWith(
           status: AssistantChatStatus.failure,
           errorMessage: _unexpectedErrorMessage,
-          caregiverPhotoUrl: caregiverPhotoUrl,
+          caregiverPhotoUrl: caregiverPhoto.photoUrl,
+          caregiverPhotoBase64: caregiverPhoto.photoBase64,
         ),
       );
     }
@@ -88,13 +91,13 @@ class AssistantChatBloc extends Bloc<AssistantChatEvent, AssistantChatState> {
   ///
   /// Sem foto a tela mostra o avatar genérico — não é motivo para bloquear a
   /// conversa nem para exibir tela de erro.
-  Future<String?> _loadCaregiverPhotoUrl() async {
+  Future<CaregiverPhoto> _loadCaregiverPhoto() async {
     try {
-      return await _caregiverRepository.fetchPhotoUrl();
+      return await _caregiverRepository.fetchPhoto();
     } on AppException {
-      return null;
+      return const CaregiverPhoto();
     } catch (_) {
-      return null;
+      return const CaregiverPhoto();
     }
   }
 

@@ -32,6 +32,7 @@ class AssistantMessageBubble extends StatelessWidget {
     required this.profile,
     required this.onQuickReplyTap,
     this.caregiverPhotoUrl,
+    this.caregiverPhotoBase64,
   });
 
   /// Mensagem exibida.
@@ -40,8 +41,11 @@ class AssistantMessageBubble extends StatelessWidget {
   /// Identidade do agente — define avatar e nome anunciado por leitores de tela.
   final AssistantProfile profile;
 
-  /// Foto do cuidador logado, a mesma exibida no `AppHeader`.
+  /// Foto do cuidador logado (URL), a mesma exibida no `AppHeader`.
   final String? caregiverPhotoUrl;
+
+  /// Foto do cuidador logado (base64), usada quando não há URL disponível.
+  final String? caregiverPhotoBase64;
 
   /// Disparado quando a cuidadora toca em um atalho sugerido.
   final ValueChanged<AssistantQuickReply> onQuickReplyTap;
@@ -51,6 +55,15 @@ class AssistantMessageBubble extends StatelessWidget {
     final hour = message.timestamp.hour.toString().padLeft(2, '0');
     final minute = message.timestamp.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
+  }
+
+  /// Retorna a foto do cuidador, priorizando a URL, mas usando base64 como
+  /// fallback se necessário.
+  String? get _caregiverPhoto {
+    if (caregiverPhotoUrl != null && caregiverPhotoUrl!.isNotEmpty) {
+      return caregiverPhotoUrl;
+    }
+    return caregiverPhotoBase64;
   }
 
   @override
@@ -82,7 +95,7 @@ class AssistantMessageBubble extends StatelessWidget {
               Flexible(child: _buildBubble(context, isFromUser: isFromUser)),
               if (isFromUser) ...[
                 const SizedBox(width: AppSpacing.xs),
-                AppChatAvatar.photo(photoUrl: caregiverPhotoUrl),
+                AppChatAvatar.photo(photoUrl: _caregiverPhoto),
               ],
             ],
           ),

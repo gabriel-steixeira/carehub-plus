@@ -126,10 +126,14 @@ class _ChatRoomViewState extends State<ChatRoomView> {
       body: AppPageFrame(
         child: Column(
           children: [
-            BlocSelector<ChatBloc, ChatState, String?>(
-              selector: (state) => state.caregiverPhotoUrl,
-              builder: (context, caregiverPhotoUrl) => AppHeader(
-                photoUrl: caregiverPhotoUrl,
+            BlocSelector<ChatBloc, ChatState, ({String? photoUrl, String? photoBase64})>(
+              selector: (state) => (
+                photoUrl: state.caregiverPhotoUrl,
+                photoBase64: state.caregiverPhotoBase64,
+              ),
+              builder: (context, photo) => AppHeader(
+                photoUrl: photo.photoUrl,
+                photoBase64: photo.photoBase64,
                 showSettings: false,
                 leading: BackButton(
                   color: AppColors.textPrimary,
@@ -227,6 +231,8 @@ class _ChatRoomViewState extends State<ChatRoomView> {
               senderAvatarUrl:
                   widget.room.responsibleMemberPhotoUrl ??
                   widget.room.avatarUrl,
+              caregiverAvatarUrl: state.caregiverPhotoUrl,
+              caregiverAvatarBase64: state.caregiverPhotoBase64,
             );
           },
         );
