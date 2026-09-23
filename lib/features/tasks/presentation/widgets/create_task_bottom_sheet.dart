@@ -4,9 +4,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/utils/date_format_helper.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_member_avatar.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/date_picker_bottom_sheet.dart';
 import '../../../categories/presentation/bloc/care_categories_bloc.dart';
 import '../../../categories/presentation/models/category_visuals.dart';
 import '../../../network/data/models/network_member_model.dart';
@@ -50,6 +52,7 @@ class _CreateTaskBottomSheetState extends State<CreateTaskBottomSheet> {
 
   String? _categoryId;
   TaskFrequency _frequency = TaskFrequency.daily;
+  DateTime _selectedDate = DateTime.now();
   TimeOfDay _time = TimeOfDay.now();
   NetworkMemberModel? _selectedMember;
 
@@ -58,6 +61,17 @@ class _CreateTaskBottomSheetState extends State<CreateTaskBottomSheet> {
     _titleController.dispose();
     _descController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await DatePickerBottomSheet.show(
+      context,
+      initialDate: _selectedDate,
+      minDate: DateTime.now().subtract(const Duration(days: 1)),
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
   }
 
   Future<void> _pickTime() async {
@@ -84,11 +98,10 @@ class _CreateTaskBottomSheetState extends State<CreateTaskBottomSheet> {
   void _submit(String fallbackCategoryId) {
     if (!_formKey.currentState!.validate()) return;
 
-    final now = DateTime.now();
     final scheduledDateTime = DateTime(
-      now.year,
-      now.month,
-      now.day,
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
       _time.hour,
       _time.minute,
     );
@@ -200,9 +213,64 @@ class _CreateTaskBottomSheetState extends State<CreateTaskBottomSheet> {
                       ),
                       const SizedBox(height: AppSpacing.md),
 
-                      // Time Picker Field
+                      // Date and Time Picker Row
                       Row(
                         children: [
+                          // Data
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Data',
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                GestureDetector(
+                                  onTap: _pickDate,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(
+                                      AppSpacing.md,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: AppColors.border,
+                                      ),
+                                      borderRadius: BorderRadius.circular(
+                                        AppSpacing.radiusMd,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.calendar_today,
+                                          color: AppColors.primary,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: AppSpacing.sm),
+                                        Expanded(
+                                          child: Text(
+                                            DateFormatHelper.formatHumanized(
+                                              _selectedDate,
+                                            ),
+                                            style: AppTypography.titleMedium
+                                                .copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          // Horário
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -251,54 +319,49 @@ class _CreateTaskBottomSheetState extends State<CreateTaskBottomSheet> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Frequência',
-                                  style: AppTypography.bodyMedium.copyWith(
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.sm,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: AppColors.border),
-                                    borderRadius: BorderRadius.circular(
-                                      AppSpacing.radiusMd,
-                                    ),
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<TaskFrequency>(
-                                      value: _frequency,
-                                      isExpanded: true,
-                                      items: TaskFrequency.values.map((freq) {
-                                        return DropdownMenuItem(
-                                          value: freq,
-                                          child: Text(
-                                            freq.label,
-                                            style: AppTypography.bodyMedium,
-                                          ),
-                                        );
-                                      }).toList(),
-                                      onChanged: (val) {
-                                        if (val != null) {
-                                          setState(() => _frequency = val);
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+
+                      // Frequency
+                      Text(
+                        'Frequência',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.border),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusMd,
+                          ),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<TaskFrequency>(
+                            value: _frequency,
+                            isExpanded: true,
+                            items: TaskFrequency.values.map((freq) {
+                              return DropdownMenuItem(
+                                value: freq,
+                                child: Text(
+                                  freq.label,
+                                  style: AppTypography.bodyMedium,
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => _frequency = val);
+                              }
+                            },
+                          ),
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
 
