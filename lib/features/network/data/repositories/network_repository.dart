@@ -1,60 +1,58 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../../../core/errors/app_exception.dart';
 import '../models/network_member_model.dart';
 
 /// Repository for managing the Support Network with real Firebase Firestore integration.
 class NetworkRepository {
-  NetworkRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  NetworkRepository({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
 
-  final List<NetworkMemberModel> _seedMembers = [
-    const NetworkMemberModel(
-      id: 'mem_1',
-      name: 'Patrícia Cuidadora',
-      phone: '(11) 98765-4321',
-      role: NetworkRole.caregiver,
-      email: 'patricia.cuidadora@email.com',
-      photoUrl: 'https://i.pravatar.cc/150?img=47',
-      isOnline: true,
-    ),
-    const NetworkMemberModel(
-      id: 'mem_2',
-      name: 'Dr. Roberto Santos',
-      phone: '(11) 91234-5678',
-      role: NetworkRole.doctor,
-      email: 'dr.roberto@cardio.med.br',
-      photoUrl: 'https://i.pravatar.cc/150?img=11',
-      isOnline: false,
-    ),
-    const NetworkMemberModel(
-      id: 'mem_3',
-      name: 'Carlos Teixeira',
-      phone: '(11) 99887-6655',
-      role: NetworkRole.family,
-      email: 'carlos.t@email.com',
-      photoUrl: 'https://i.pravatar.cc/150?img=12',
-      isOnline: true,
-    ),
-  ];
+  String _currentUserId() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw const AppException(
+        'Usuário não autenticado. Faça login novamente.',
+      );
+    }
+    return user.uid;
+  }
 
-  Future<List<NetworkMemberModel>> fetchMembers() async {
+  /// Busca somente membros realmente cadastrados. Uma rede vazia é um estado
+  /// válido e deve levar a interface a orientar o cadastro de um contato.
+  ///
+  /// Quando [careRecipientId] é informado, retorna apenas os membros
+  /// vinculados àquele perfil cuidado. Registros antigos sem o campo
+  /// `careRecipientId` ficam invisíveis no filtro — comportamento esperado,
+  /// pois eles não pertencem a nenhum perfil específico.
+  Future<List<NetworkMemberModel>> fetchMembers({
+    String? careRecipientId,
+  }) async {
     try {
-      final snapshot = await _firestore.collection('network_members').get();
-      if (snapshot.docs.isNotEmpty) {
-        return snapshot.docs
-            .map((doc) => NetworkMemberModel.fromJson(doc.data()))
-            .toList();
+      Query<Map<String, dynamic>> query = _firestore
+          .collection('network_members')
+          .where('caregiverId', isEqualTo: _currentUserId());
+      if (careRecipientId != null && careRecipientId.isNotEmpty) {
+        query = query.where('careRecipientId', isEqualTo: careRecipientId);
       }
-
-      // Seed default members
-      for (final m in _seedMembers) {
-        await _firestore.collection('network_members').doc(m.id).set(m.toJson());
-      }
-      return _seedMembers;
+      final snapshot = await query.get();
+      return snapshot.docs
+          .map((document) => NetworkMemberModel.fromJson(document.data()))
+          .toList();
+    } on FirebaseException catch (error) {
+      throw AppException(
+        'Não foi possível carregar a rede de apoio. Tente novamente.',
+        code: error.code,
+      );
     } catch (_) {
-      return _seedMembers;
+      throw const AppException(
+        'Não foi possível carregar a rede de apoio. Tente novamente.',
+      );
     }
   }
 
@@ -64,8 +62,16 @@ class NetworkRepository {
         : member.id;
     final data = member.toJson();
     data['id'] = docId;
+    data['caregiverId'] = _currentUserId();
 
     await _firestore.collection('network_members').doc(docId).set(data);
+    return NetworkMemberModel.fromJson(data);
+  }
+
+  Future<NetworkMemberModel> updateMember(NetworkMemberModel member) async {
+    final data = member.toJson();
+    data['caregiverId'] = _currentUserId();
+    await _firestore.collection('network_members').doc(member.id).set(data);
     return NetworkMemberModel.fromJson(data);
   }
 

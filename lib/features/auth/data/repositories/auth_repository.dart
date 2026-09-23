@@ -67,6 +67,7 @@ class AuthRepository {
     required String name,
     required String email,
     required String password,
+    String? photoBase64,
   }) async {
     try {
       final credential = await _authService.signUpWithEmail(
@@ -82,6 +83,7 @@ class AuthRepository {
           name: name,
           email: email,
           photoUrl: user.photoURL,
+          photoBase64: photoBase64,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );

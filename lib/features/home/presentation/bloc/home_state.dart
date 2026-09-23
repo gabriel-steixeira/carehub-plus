@@ -12,6 +12,9 @@ class HomeState extends Equatable {
     this.isAddingProfile = false,
     this.addProfileSuccess = false,
     this.addProfileError,
+    this.isDeletingProfile = false,
+    this.deleteProfileSuccess = false,
+    this.deleteProfileError,
   });
 
   final HomeStatus status;
@@ -25,6 +28,11 @@ class HomeState extends Equatable {
   final bool addProfileSuccess;
   final String? addProfileError;
 
+  // Delete profile sub-state
+  final bool isDeletingProfile;
+  final bool deleteProfileSuccess;
+  final String? deleteProfileError;
+
   HomeState copyWith({
     HomeStatus? status,
     CaregiverModel? caregiver,
@@ -34,6 +42,9 @@ class HomeState extends Equatable {
     bool? isAddingProfile,
     bool? addProfileSuccess,
     String? addProfileError,
+    bool? isDeletingProfile,
+    bool? deleteProfileSuccess,
+    String? deleteProfileError,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -44,6 +55,9 @@ class HomeState extends Equatable {
       isAddingProfile: isAddingProfile ?? this.isAddingProfile,
       addProfileSuccess: addProfileSuccess ?? this.addProfileSuccess,
       addProfileError: addProfileError ?? this.addProfileError,
+      isDeletingProfile: isDeletingProfile ?? this.isDeletingProfile,
+      deleteProfileSuccess: deleteProfileSuccess ?? this.deleteProfileSuccess,
+      deleteProfileError: deleteProfileError ?? this.deleteProfileError,
     );
   }
 
@@ -57,5 +71,8 @@ class HomeState extends Equatable {
         isAddingProfile,
         addProfileSuccess,
         addProfileError,
+        isDeletingProfile,
+        deleteProfileSuccess,
+        deleteProfileError,
       ];
 }

@@ -33,7 +33,10 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
           (profiles.isNotEmpty ? profiles.first.id : '');
 
       final summary = selectedId.isNotEmpty
-          ? await _repository.fetchDashboardSummary(selectedId)
+          ? await _repository.fetchDashboardSummary(
+              profileId: selectedId,
+              monitoredProfilesCount: profiles.length,
+            )
           : null;
 
       emit(state.copyWith(
@@ -63,8 +66,10 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     ));
 
     try {
-      final summary =
-          await _repository.fetchDashboardSummary(event.profileId);
+      final summary = await _repository.fetchDashboardSummary(
+        profileId: event.profileId,
+        monitoredProfilesCount: state.profiles.length,
+      );
       emit(state.copyWith(
         status: DashboardStatus.success,
         summary: summary,

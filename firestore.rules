@@ -6,6 +6,38 @@ service cloud.firestore {
     // 1. Coleção de Cuidadores (Perfil do usuário autenticado)
     match /caregivers/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Histórico de contratos do próprio cuidador. O app pode ler e criar
+      // registros para manter o valor contratado, mas nunca acessa o contrato
+      // de outra conta.
+      match /subscriptions/{subscriptionId} {
+        allow read: if request.auth != null &&
+          request.auth.uid == userId &&
+          resource.data.caregiverId == userId;
+        allow create: if request.auth != null &&
+          request.auth.uid == userId &&
+          request.resource.data.caregiverId == userId &&
+          request.resource.data.status == 'active' &&
+          request.resource.data.currency == 'BRL' &&
+          request.resource.data.planNameSnapshot ==
+            get(/databases/$(database)/documents/subscriptionPlans/$(request.resource.data.planId)).data.name &&
+          request.resource.data.monthlyPriceCents ==
+            get(/databases/$(database)/documents/subscriptionPlans/$(request.resource.data.planId)).data.monthlyPriceCents &&
+          request.resource.data.annualPriceCents ==
+            get(/databases/$(database)/documents/subscriptionPlans/$(request.resource.data.planId)).data.annualPriceCents &&
+          request.resource.data.amountCents ==
+            (request.resource.data.billingCycle == 'annual'
+                ? request.resource.data.annualPriceCents
+                : request.resource.data.monthlyPriceCents);
+        allow update: if request.auth != null &&
+          request.auth.uid == userId &&
+          resource.data.caregiverId == userId &&
+          request.resource.data.caregiverId == userId &&
+          request.resource.data.amountCents == resource.data.amountCents &&
+          request.resource.data.planId == resource.data.planId &&
+          request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if false;
+      }
     }
 
     // 2. Coleção de Assistidos e Pets (Care Recipients)
@@ -19,13 +51,57 @@ service cloud.firestore {
     }
 
     // 4. Coleção da Rede de Apoio
+    // Cada membro pertence ao cuidador autenticado. Quando vinculado a um
+    // perfil, o perfil também precisa pertencer ao mesmo cuidador.
     match /network_members/{memberId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null &&
+        resource.data.caregiverId == request.auth.uid;
+      allow create: if request.auth != null &&
+        request.resource.data.caregiverId == request.auth.uid &&
+        (request.resource.data.careRecipientId == null ||
+          get(/databases/$(database)/documents/care_recipients/$(request.resource.data.careRecipientId)).data.caregiverId == request.auth.uid);
+      allow update: if request.auth != null &&
+        resource.data.caregiverId == request.auth.uid &&
+        request.resource.data.caregiverId == request.auth.uid &&
+        (request.resource.data.careRecipientId == null ||
+          get(/databases/$(database)/documents/care_recipients/$(request.resource.data.careRecipientId)).data.caregiverId == request.auth.uid);
+      allow delete: if request.auth != null &&
+        resource.data.caregiverId == request.auth.uid;
     }
 
     // 5. Coleções de Chat e Mensagens da Equipe
     match /chat_rooms/{document=**} {
       allow read, write: if request.auth != null;
+    }
+
+    // 6. Categorias de Cuidado (compartilhadas entre Tarefas e Chat)
+    // PENDENTE DE PUBLICAÇÃO: esta regra ainda não foi enviada ao Firebase
+    // (falta acesso de administrador ao projeto "carehub-plus" nesta
+    // máquina). Enquanto isso, CareCategoriesRepository guarda as
+    // categorias localmente (shared_preferences). Quando o acesso for
+    // resolvido, publicar esta regra com `firebase deploy --only
+    // firestore:rules` e voltar o repositório para Firestore.
+    match /care_categories/{categoryId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // 7. Conteúdo institucional compartilhado
+    // Usuários autenticados podem consultar o texto do aplicativo, mas o
+    // conteúdo é administrado fora do cliente.
+    match /about_content/{documentId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // 8. Catálogo de Planos de Assinatura
+    // Somente leitura pelo app: preço, benefícios e limites são dados
+    // comerciais e devem ser administrados no Console do Firebase, nunca
+    // gravados pelo aplicativo.
+    // PENDENTE DE PUBLICAÇÃO: sem esta regra publicada, a tela de Assinaturas
+    // e o cartão de plano do Perfil falham com "permissão negada".
+    match /subscriptionPlans/{planId} {
+      allow read: if request.auth != null;
+      allow write: if false;
     }
 
   }

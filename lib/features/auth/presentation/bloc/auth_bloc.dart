@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../services/image_upload_service.dart';
 import '../../data/repositories/auth_repository.dart';
 
 part 'auth_event.dart';
@@ -8,9 +11,12 @@ part 'auth_state.dart';
 
 /// BLoC for authentication — handles login via email or social providers.
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  AuthBloc({required AuthRepository repository})
-    : _repository = repository,
-      super(const AuthState()) {
+  AuthBloc({
+    required AuthRepository repository,
+    ImageUploadService? imageUploadService,
+  })  : _repository = repository,
+        _imageUploadService = imageUploadService ?? ImageUploadService(),
+        super(const AuthState()) {
     on<AuthLoginSubmitted>(_onLoginSubmitted);
     on<AuthGoogleSignInRequested>(_onGoogleSignIn);
     on<AuthFacebookSignInRequested>(_onFacebookSignIn);
@@ -19,6 +25,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   final AuthRepository _repository;
+  final ImageUploadService _imageUploadService;
 
   Future<void> _onPasswordResetRequested(
     AuthPasswordResetRequested event,
@@ -41,10 +48,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(state.copyWith(status: AuthStatus.loading));
     try {
+      // Convert photo to base64 if provided.
+      String? photoBase64;
+      if (event.imageFile != null) {
+        photoBase64 = await _imageUploadService.fileToBase64(event.imageFile!);
+      }
+
       await _repository.signUpWithEmail(
         name: event.name,
         email: event.email,
         password: event.password,
+        photoBase64: photoBase64,
       );
       emit(state.copyWith(status: AuthStatus.success));
     } catch (e) {

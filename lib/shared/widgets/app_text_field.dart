@@ -10,6 +10,7 @@ class AppTextField extends StatelessWidget {
     super.key,
     this.controller,
     this.label,
+    this.labelStyle,
     this.hint,
     this.prefixIcon,
     this.suffixIcon,
@@ -20,10 +21,18 @@ class AppTextField extends StatelessWidget {
     this.textInputAction,
     this.autofillHints,
     this.enabled = true,
+    this.filled = false,
   });
 
   final TextEditingController? controller;
   final String? label;
+
+  /// Estilo do rótulo. `null` mantém o padrão do design system.
+  ///
+  /// Existe para telas cujo rótulo é em caixa alta (ex.: "NOME COMPLETO"),
+  /// que usam `AppTypography.sectionLabel` — sem isso cada tela precisaria
+  /// desenhar o rótulo por fora e perderia o alinhamento do campo.
+  final TextStyle? labelStyle;
   final String? hint;
   final IconData? prefixIcon;
   final Widget? suffixIcon;
@@ -35,6 +44,14 @@ class AppTextField extends StatelessWidget {
   final Iterable<String>? autofillHints;
   final bool enabled;
 
+  /// Preenche o fundo do campo com `AppColors.background`.
+  ///
+  /// Padrão `false`: o campo é transparente e assume o fundo de quem o
+  /// contém — é o que as telas com cartão branco (login, cadastro) esperam.
+  /// Use `true` quando o campo fica direto sobre o gradiente da página, senão
+  /// o lilás aparece dentro da área de digitação.
+  final bool filled;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -44,10 +61,12 @@ class AppTextField extends StatelessWidget {
         if (label != null) ...[
           Text(
             label!,
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w500,
-            ),
+            style:
+                labelStyle ??
+                AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
           ),
           const SizedBox(height: AppSpacing.sm),
         ],
@@ -62,6 +81,8 @@ class AppTextField extends StatelessWidget {
           enabled: enabled,
           style: AppTypography.bodyLarge.copyWith(color: AppColors.textPrimary),
           decoration: InputDecoration(
+            filled: filled,
+            fillColor: filled ? AppColors.background : null,
             hintText: hint,
             hintStyle: AppTypography.bodyLarge.copyWith(
               color: AppColors.textHint,

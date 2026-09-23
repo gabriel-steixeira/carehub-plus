@@ -25,14 +25,23 @@ class HomeAddProfileEvent extends HomeEvent {
     required this.name,
     required this.recipientType,
     this.dateOfBirth,
-    this.photoUrl,
+    this.imageFile,
   });
 
   final String name;
   final CareRecipientType recipientType;
   final DateTime? dateOfBirth;
-  final String? photoUrl;
+  final File? imageFile;
 
   @override
-  List<Object?> get props => [name, recipientType, dateOfBirth, photoUrl];
+  List<Object?> get props => [name, recipientType, dateOfBirth, imageFile];
+}
+
+class HomeDeleteProfileEvent extends HomeEvent {
+  const HomeDeleteProfileEvent({required this.profileId});
+
+  final String profileId;
+
+  @override
+  List<Object?> get props => [profileId];
 }

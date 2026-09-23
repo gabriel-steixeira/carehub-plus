@@ -25,6 +25,23 @@ class Validators {
     return null;
   }
 
+  /// Validates an optional Brazilian phone number.
+  ///
+  /// Empty is valid on purpose: the phone is optional in the caregiver profile.
+  /// When filled, accepts 10 digits (landline) or 11 (mobile), ignoring the
+  /// punctuation the user may type — `(11) 98765-4321` and `11987654321` are
+  /// both valid.
+  static String? optionalPhone(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+    final digits = value.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 10 || digits.length > 11) {
+      return 'Telefone inválido';
+    }
+    return null;
+  }
+
   /// Validates that a field is not empty.
   static String? required(String? value, [String fieldName = 'campo']) {
     if (value == null || value.trim().isEmpty) {
