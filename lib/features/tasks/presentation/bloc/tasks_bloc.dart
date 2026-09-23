@@ -110,6 +110,7 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     try {
       final newTask = TaskModel(
         id: 'task_${DateTime.now().millisecondsSinceEpoch}',
+        caregiverId: '', // Será sobrescrito pelo addTask com o UID do usuário logado
         careRecipientId: event.careRecipientId,
         title: event.title,
         description: event.description,

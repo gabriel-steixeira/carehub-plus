@@ -6,6 +6,7 @@ import 'task_frequency.dart';
 class TaskModel extends Equatable {
   const TaskModel({
     required this.id,
+    required this.caregiverId,
     required this.careRecipientId,
     required this.title,
     this.description = '',
@@ -21,6 +22,12 @@ class TaskModel extends Equatable {
   });
 
   final String id;
+  
+  /// ID do cuidador (dono da conta) que criou esta tarefa. Garante que cada
+  /// cuidador só veja suas próprias tarefas, mesmo que perfis de cuidado
+  /// tenham IDs coincidentes entre contas diferentes.
+  final String caregiverId;
+  
   final String careRecipientId;
   final String title;
   final String description;
@@ -43,6 +50,7 @@ class TaskModel extends Equatable {
   factory TaskModel.fromJson(Map<String, dynamic> json) {
     return TaskModel(
       id: json['id'] as String,
+      caregiverId: json['caregiverId'] as String? ?? '',
       careRecipientId: json['careRecipientId'] as String,
       title: json['title'] as String,
       description: json['description'] as String? ?? '',
@@ -68,6 +76,7 @@ class TaskModel extends Equatable {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'caregiverId': caregiverId,
       'careRecipientId': careRecipientId,
       'title': title,
       'description': description,
@@ -85,6 +94,7 @@ class TaskModel extends Equatable {
 
   TaskModel copyWith({
     String? id,
+    String? caregiverId,
     String? careRecipientId,
     String? title,
     String? description,
@@ -100,6 +110,7 @@ class TaskModel extends Equatable {
   }) {
     return TaskModel(
       id: id ?? this.id,
+      caregiverId: caregiverId ?? this.caregiverId,
       careRecipientId: careRecipientId ?? this.careRecipientId,
       title: title ?? this.title,
       description: description ?? this.description,
@@ -118,6 +129,7 @@ class TaskModel extends Equatable {
   @override
   List<Object?> get props => [
     id,
+    caregiverId,
     careRecipientId,
     title,
     description,
