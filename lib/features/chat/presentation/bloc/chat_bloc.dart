@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../services/selected_profile_service.dart';
 import '../../../home/data/models/care_recipient_model.dart';
 import '../../../home/data/repositories/home_repository.dart';
 import '../../data/models/chat_message_model.dart';
@@ -36,8 +37,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     try {
       final caregiver = await _homeRepository.fetchCaregiver();
       final profiles = await _homeRepository.fetchCareRecipients();
-      final selectedProfileId =
-          event.careRecipientId ?? profiles.firstOrNull?.id;
+      final selectedProfileId = await _resolveSelectedProfileId(
+        event.careRecipientId,
+        profiles,
+      );
       final rooms = selectedProfileId == null
           ? const <ChatRoomModel>[]
           : await _repository.fetchChatRooms(
@@ -63,6 +66,32 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         state.copyWith(status: ChatStatus.failure, errorMessage: e.toString()),
       );
     }
+  }
+
+  /// Resolve o perfil a exibir: id recebido por navegação, depois o perfil
+  /// salvo pela seleção do usuário e, por fim, o primeiro da lista. Evita que
+  /// a lista de assuntos "troque" de assistido quando aberta sem um id.
+  Future<String?> _resolveSelectedProfileId(
+    String? navigationId,
+    List<CareRecipientModel> profiles,
+  ) async {
+    bool existsInList(String id) => profiles.any((p) => p.id == id);
+
+    if (navigationId != null && existsInList(navigationId)) {
+      return navigationId;
+    }
+
+    try {
+      final service = await SelectedProfileService.create();
+      final savedId = service.getSelectedProfileId();
+      if (savedId != null && existsInList(savedId)) {
+        return savedId;
+      }
+    } catch (_) {
+      // Falha ao ler a seleção não impede o carregamento dos assuntos.
+    }
+
+    return profiles.firstOrNull?.id;
   }
 
   void _onSearchQueryChanged(
@@ -109,7 +138,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     );
     try {
       // Carrega a foto do cuidador se ainda não foi carregada
-      if (state.caregiverPhotoUrl == null && state.caregiverPhotoBase64 == null) {
+      if (state.caregiverPhotoUrl == null &&
+          state.caregiverPhotoBase64 == null) {
         final caregiver = await _homeRepository.fetchCaregiver();
         final messages = await _repository.fetchMessages(event.roomId);
         emit(

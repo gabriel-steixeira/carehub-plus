@@ -36,7 +36,7 @@ import 'app_tinted_card.dart';
 class AppIdentityCard extends StatelessWidget {
   const AppIdentityCard({
     super.key,
-    required this.imageAsset,
+    this.imageAsset,
     required this.title,
     this.role,
     this.subtitle,
@@ -47,8 +47,9 @@ class AppIdentityCard extends StatelessWidget {
   });
 
   /// Caminho do avatar dentro de `assets/`. Ignorado quando [imageUrl] é
-  /// informado.
-  final String imageAsset;
+  /// informado. Quando nulo e sem [imageUrl], mostra o ícone de fallback —
+  /// evita usar imagens genéricas (como o logo) no lugar de um avatar.
+  final String? imageAsset;
 
   /// Foto remota do avatar (ex.: rede de apoio). Quando presente, tem
   /// prioridade sobre [imageAsset] — permite reaproveitar este cartão em
@@ -151,9 +152,9 @@ class AppIdentityCard extends StatelessWidget {
 
 /// Avatar redondo com anel branco, usado apenas pelo [AppIdentityCard].
 class _IdentityAvatar extends StatelessWidget {
-  const _IdentityAvatar({required this.imageAsset, this.imageUrl});
+  const _IdentityAvatar({this.imageAsset, this.imageUrl});
 
-  final String imageAsset;
+  final String? imageAsset;
   final String? imageUrl;
 
   Widget _buildImage(BuildContext context, double size) {
@@ -173,17 +174,24 @@ class _IdentityAvatar extends StatelessWidget {
       }
     }
 
-    return value != null && value.isNotEmpty
-        ? Image.network(
-            value,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _fallback,
-          )
-        : Image.asset(
-            imageAsset,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _fallback,
-          );
+    if (value != null && value.isNotEmpty) {
+      return Image.network(
+        value,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _fallback,
+      );
+    }
+
+    // Sem foto remota: usa o asset apenas se houver um; caso contrário, mostra
+    // o ícone de avatar em vez de uma imagem genérica.
+    final asset = imageAsset;
+    if (asset == null || asset.isEmpty) return _fallback;
+
+    return Image.asset(
+      asset,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => _fallback,
+    );
   }
 
   @override

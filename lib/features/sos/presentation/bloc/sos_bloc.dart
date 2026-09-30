@@ -18,6 +18,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/errors/app_exception.dart';
+import '../../../../services/selected_profile_service.dart';
 import '../../../home/data/models/care_recipient_model.dart';
 import '../../../network/data/models/network_member_model.dart';
 import '../../../tasks/data/models/task_model.dart';
@@ -65,7 +66,10 @@ class SosBloc extends Bloc<SosEvent, SosState> {
     try {
       final photoUrl = await _repository.fetchCaregiverPhotoUrl();
       final profiles = await _repository.fetchProfiles();
-      final profileId = _resolveProfileId(event.careRecipientId, profiles);
+      final profileId = await _resolveProfileId(
+        event.careRecipientId,
+        profiles,
+      );
       final members = await _repository.fetchSupportNetwork(
         careRecipientId: profileId,
       );
@@ -327,13 +331,31 @@ class SosBloc extends Bloc<SosEvent, SosState> {
 
   /// Perfil que deve abrir selecionado: o pedido da rota, quando existe, ou o
   /// primeiro perfil cadastrado.
-  String _resolveProfileId(
+  /// Resolve o perfil a exibir: id recebido por navegação, depois o perfil
+  /// salvo pela seleção do usuário e, por fim, o primeiro da lista. Evita que
+  /// o SOS "troque" de assistido quando aberto sem um id explícito.
+  Future<String> _resolveProfileId(
     String? requestedProfileId,
     List<CareRecipientModel> profiles,
-  ) {
-    if (requestedProfileId != null && requestedProfileId.isNotEmpty) {
+  ) async {
+    bool existsInList(String id) => profiles.any((p) => p.id == id);
+
+    if (requestedProfileId != null &&
+        requestedProfileId.isNotEmpty &&
+        existsInList(requestedProfileId)) {
       return requestedProfileId;
     }
+
+    try {
+      final service = await SelectedProfileService.create();
+      final savedId = service.getSelectedProfileId();
+      if (savedId != null && existsInList(savedId)) {
+        return savedId;
+      }
+    } catch (_) {
+      // Falha ao ler a seleção não impede o carregamento do SOS.
+    }
+
     return profiles.isNotEmpty ? profiles.first.id : '';
   }
 }

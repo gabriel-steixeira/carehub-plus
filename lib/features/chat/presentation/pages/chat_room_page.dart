@@ -126,7 +126,11 @@ class _ChatRoomViewState extends State<ChatRoomView> {
       body: AppPageFrame(
         child: Column(
           children: [
-            BlocSelector<ChatBloc, ChatState, ({String? photoUrl, String? photoBase64})>(
+            BlocSelector<
+              ChatBloc,
+              ChatState,
+              ({String? photoUrl, String? photoBase64})
+            >(
               selector: (state) => (
                 photoUrl: state.caregiverPhotoUrl,
                 photoBase64: state.caregiverPhotoBase64,
@@ -158,7 +162,6 @@ class _ChatRoomViewState extends State<ChatRoomView> {
                     return Column(
                       children: [
                         AppIdentityCard(
-                          imageAsset: 'assets/images/logo_pequeno.png',
                           imageUrl:
                               widget.room.responsibleMemberPhotoUrl ??
                               widget.room.avatarUrl,

@@ -22,6 +22,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/app_responsive.dart';
+import '../../../../services/selected_profile_service.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_loading.dart';
@@ -165,12 +166,7 @@ class _ProfilesGrid extends StatelessWidget {
     final int pairCount = profiles.length ~/ 2;
 
     for (int i = 0; i < pairCount; i++) {
-      rows.add(
-        _ProfileRow(
-          left: profiles[i * 2],
-          right: profiles[i * 2 + 1],
-        ),
-      );
+      rows.add(_ProfileRow(left: profiles[i * 2], right: profiles[i * 2 + 1]));
       rows.add(const SizedBox(height: AppSpacing.xl));
     }
 
@@ -178,9 +174,7 @@ class _ProfilesGrid extends StatelessWidget {
       rows.add(
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _ProfileCard(profile: profiles.last),
-          ],
+          children: [_ProfileCard(profile: profiles.last)],
         ),
       );
     }
@@ -332,8 +326,8 @@ class _ProfileCard extends StatelessWidget {
             onPressed: () {
               Navigator.pop(ctx);
               context.read<HomeBloc>().add(
-                    HomeDeleteProfileEvent(profileId: profile.id),
-                  );
+                HomeDeleteProfileEvent(profileId: profile.id),
+              );
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
@@ -345,8 +339,7 @@ class _ProfileCard extends StatelessWidget {
                   backgroundColor: AppColors.success,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.radiusMd),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   ),
                 ),
               );
@@ -369,7 +362,18 @@ class _ProfileCard extends StatelessWidget {
     final bool hasPending = profile.unreadNotificationsCount > 0;
 
     return GestureDetector(
-      onTap: () => context.push(AppRoutes.dashboard, extra: profile.id),
+      onTap: () async {
+        // Salva o perfil selecionado antes de navegar
+        final profileService = await SelectedProfileService.create();
+        await profileService.setSelectedProfile(
+          careRecipientId: profile.id,
+          careRecipientName: profile.name,
+        );
+
+        if (context.mounted) {
+          context.push(AppRoutes.dashboard, extra: profile.id);
+        }
+      },
       child: SizedBox(
         width: 130,
         child: Column(

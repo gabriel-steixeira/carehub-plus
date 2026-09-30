@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../services/selected_profile_service.dart';
 import '../../../home/data/models/care_recipient_model.dart';
 import '../../../home/data/models/caregiver_model.dart';
 import '../../../home/data/repositories/home_repository.dart';
@@ -40,18 +41,22 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
       final profiles = await _homeRepository.fetchCareRecipients();
       final tasks = await _repository.fetchTasks();
 
+      // Resolve o perfil na ordem: id de navegação → perfil salvo pela seleção
+      // do usuário → primeiro da lista. Evita que Tarefas "troque" de assistido
+      // quando aberta sem um id (ex.: vinda do SOS pela navegação inferior).
+      final resolvedProfileId = await _resolveSelectedProfileId(
+        event.careRecipientId,
+        profiles,
+      );
+
       emit(
         state.copyWith(
           status: TasksStatus.success,
           caregiver: caregiver,
           profiles: profiles,
           tasks: tasks,
-          careRecipientId: event.careRecipientId,
-          // Single-profile only: default to the first profile when none was
-          // provided through navigation (there is no longer an "all" option).
-          selectedProfileId:
-              event.careRecipientId ??
-              (profiles.isNotEmpty ? profiles.first.id : ''),
+          careRecipientId: resolvedProfileId,
+          selectedProfileId: resolvedProfileId,
         ),
       );
     } catch (e) {
@@ -59,6 +64,33 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
         state.copyWith(status: TasksStatus.failure, errorMessage: e.toString()),
       );
     }
+  }
+
+  /// Resolve o perfil a exibir: id recebido por navegação, depois o perfil
+  /// salvo pela seleção do usuário e, por fim, o primeiro da lista.
+  Future<String> _resolveSelectedProfileId(
+    String? navigationId,
+    List<CareRecipientModel> profiles,
+  ) async {
+    bool existsInList(String id) => profiles.any((p) => p.id == id);
+
+    if (navigationId != null &&
+        navigationId.isNotEmpty &&
+        existsInList(navigationId)) {
+      return navigationId;
+    }
+
+    try {
+      final service = await SelectedProfileService.create();
+      final savedId = service.getSelectedProfileId();
+      if (savedId != null && existsInList(savedId)) {
+        return savedId;
+      }
+    } catch (_) {
+      // Falha ao ler a seleção não impede o carregamento das tarefas.
+    }
+
+    return profiles.isNotEmpty ? profiles.first.id : '';
   }
 
   void _onFilterChanged(
@@ -110,7 +142,8 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     try {
       final newTask = TaskModel(
         id: 'task_${DateTime.now().millisecondsSinceEpoch}',
-        caregiverId: '', // Será sobrescrito pelo addTask com o UID do usuário logado
+        caregiverId:
+            '', // Será sobrescrito pelo addTask com o UID do usuário logado
         careRecipientId: event.careRecipientId,
         title: event.title,
         description: event.description,

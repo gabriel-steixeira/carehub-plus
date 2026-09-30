@@ -20,6 +20,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../features/categories/data/repositories/care_categories_repository.dart';
 import '../../../../features/categories/presentation/bloc/care_categories_bloc.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../dashboard/presentation/widgets/active_profile_chip.dart';
+import '../../../home/data/models/care_recipient_model.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_header.dart';
@@ -158,12 +161,46 @@ class _SosPhaseView extends StatelessWidget {
 
   final SosState state;
 
+  /// Perfil cuidado atualmente selecionado, derivado do estado do SOS.
+  CareRecipientModel? get _selectedProfile {
+    if (state.profiles.isEmpty) return null;
+    for (final profile in state.profiles) {
+      if (profile.id == state.selectedProfileId) return profile;
+    }
+    return state.profiles.first;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return switch (state.phase) {
+    final phaseContent = switch (state.phase) {
       SosPhase.composing => SosComposeView(state: state),
       SosPhase.alerting => SosAlertingView(state: state),
       SosPhase.accepted => SosAcceptedView(state: state),
     };
+
+    final profile = _selectedProfile;
+    // Só a etapa de composição mostra o chip: nas etapas de alerta e aceite a
+    // atenção deve ficar no andamento do pedido, sem convite para trocar.
+    if (profile == null || state.phase != SosPhase.composing) {
+      return phaseContent;
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.md,
+            0,
+          ),
+          child: ActiveProfileChip(
+            profile: profile,
+            onChangeTap: () => context.go(AppRoutes.home),
+          ),
+        ),
+        Expanded(child: phaseContent),
+      ],
+    );
   }
 }

@@ -47,3 +47,9 @@ app.*.map.json
 # Material de estudo e AI config (não versionar)
 material/
 .kiro/
+
+# Android build intermediates
+/android/build/
+
+# API Keys sensíveis (NUNCA commitar!)
+lib/core/config/gemini_config.dart
