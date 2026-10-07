@@ -1,25 +1,28 @@
 /*
  * CareHub Plus — Dados / Cérebro do Toke
  *
- * Implementa o Toke Concierge com IA (Gemini) e contexto real da conta: perfil,
+ * Implementa o Toke Concierge com IA (Gemini, chamado pelo backend na função
+ * `tokeInterpret` — a chave não fica no app) e contexto real da conta: perfil,
  * plano atual, contrato e catálogo de planos. Faz a triagem "No Wrong Door":
  * responde, simula ou contrata planos (após confirmação), explica o que ainda
  * depende de gateway de pagamento e prepara o repasse para um humano.
  *
  * Author: Vitoria Lana
  * Created on: 25/08/2026
- * Version: 2.0.0
+ * Version: 3.0.0
  * Squad: CareHub Plus
  */
 
-import '../../../../services/gemini_service.dart';
+import '../../../../core/errors/app_exception.dart';
 import '../../../profile/data/repositories/caregiver_profile_repository.dart';
 import '../../../subscriptions/data/repositories/subscriptions_repository.dart';
 import '../../../subscriptions/domain/entities/contracted_subscription_entity.dart';
 import '../../../subscriptions/domain/entities/subscription_plan_entity.dart';
 import '../../domain/entities/assistant_message_entity.dart';
 import '../../domain/entities/assistant_quick_reply_entity.dart';
+import '../../domain/entities/support_intent_entity.dart';
 import '../../domain/repositories/assistant_repository.dart';
+import 'toke_interpreter_client.dart';
 
 /// Intenções estáveis dos atalhos do Toke.
 abstract final class _TokeIntents {
@@ -104,25 +107,26 @@ class _PlanDraft {
 /// Toke — concierge de suporte, conta e planos do CareHub+.
 class TokeAssistantRepository implements AssistantRepository {
   TokeAssistantRepository({
-    GeminiService? geminiService,
+    TokeInterpreterClient? interpreter,
     CaregiverProfileRepository? profileRepository,
     SubscriptionsRepository? subscriptionsRepository,
   }) : this._(
-         geminiService ?? GeminiService(),
+         interpreter ?? TokeInterpreterClient(),
          profileRepository ?? CaregiverProfileRepository(),
          subscriptionsRepository,
        );
 
   /// Garante que perfil e assinaturas usem a mesma instância de repositório.
   TokeAssistantRepository._(
-    this._geminiService,
+    this._interpreter,
     this._profileRepository,
     SubscriptionsRepository? subscriptionsRepository,
   ) : _subscriptionsRepository =
           subscriptionsRepository ??
           SubscriptionsRepository(profileRepository: _profileRepository);
 
-  final GeminiService _geminiService;
+  /// Triagem com IA, feita no backend (a chave do Gemini não fica no app).
+  final TokeInterpreterClient _interpreter;
   final CaregiverProfileRepository _profileRepository;
   final SubscriptionsRepository _subscriptionsRepository;
 
@@ -254,11 +258,11 @@ class TokeAssistantRepository implements AssistantRepository {
     }
 
     try {
-      final result = await _geminiService.interpretSupportRequest(
-        userMessage: text,
+      final result = await _interpreter.interpret(
+        text: text,
+        history: history,
         context: _contextFor(account),
-        conversationHistory: _mapHistory(history, currentText: text),
-        availablePlanIds: account?.plans.map((plan) => plan.id).toList() ?? [],
+        planIds: account?.plans.map((plan) => plan.id).toList() ?? [],
       );
 
       return switch (result.kind) {
@@ -285,7 +289,7 @@ class TokeAssistantRepository implements AssistantRepository {
           quickReplies: _defaultReplies,
         ),
       };
-    } on GeminiServiceException catch (error) {
+    } on AppException catch (error) {
       return _assistantMessage(
         '${error.message} Você pode tentar novamente ou usar os atalhos.',
         quickReplies: _defaultReplies,
@@ -573,31 +577,6 @@ class TokeAssistantRepository implements AssistantRepository {
     );
     final decimals = (cents % 100).toString().padLeft(2, '0');
     return 'R\$ $reais,$decimals';
-  }
-
-  List<GeminiChatMessage> _mapHistory(
-    List<AssistantMessage> history, {
-    required String currentText,
-  }) {
-    final previousMessages = List<AssistantMessage>.of(history);
-    if (previousMessages.isNotEmpty &&
-        previousMessages.last.isFromUser &&
-        previousMessages.last.text.trim() == currentText.trim()) {
-      previousMessages.removeLast();
-    }
-
-    while (previousMessages.isNotEmpty && !previousMessages.first.isFromUser) {
-      previousMessages.removeAt(0);
-    }
-
-    return previousMessages
-        .map(
-          (message) => GeminiChatMessage(
-            role: message.isFromUser ? 'user' : 'model',
-            text: message.text,
-          ),
-        )
-        .toList();
   }
 
   AssistantMessage _assistantMessage(

@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app/app.dart';
+import 'app/router/app_router.dart';
 import 'firebase_options.dart';
+import 'services/push_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +19,13 @@ void main() async {
   // Enable Firestore offline persistence
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
+  );
+
+  // Push (FCM): registra o aparelho da conta logada. Tocar na notificação
+  // com o app em segundo plano abre a caixa de notificações.
+  PushNotificationService().start(
+    onNotificationOpened: () =>
+        AppRouter.router.push(AppRoutes.notificationInbox),
   );
 
   // Lock orientation to portrait

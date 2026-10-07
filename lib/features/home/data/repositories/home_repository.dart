@@ -163,14 +163,48 @@ class HomeRepository {
           .where('caregiverId', isEqualTo: user.uid)
           .get();
 
-      if (snapshot.docs.isNotEmpty) {
-        return snapshot.docs
-            .map((doc) => CareRecipientModel.fromJson(doc.data()))
-            .toList();
-      }
+      final owned = snapshot.docs
+          .map((doc) => CareRecipientModel.fromJson(doc.data()))
+          .toList();
+      final ownedIds = owned.map((recipient) => recipient.id).toSet();
+      final shared = (await _fetchSharedCareRecipients(user.uid))
+          .where((recipient) => !ownedIds.contains(recipient.id));
 
-      return [];
+      return [...owned, ...shared];
     });
+  }
+
+  /// Perfis que outra cuidadora compartilhou com esta conta por convite.
+  ///
+  /// O backend mantém `accessUids` e `access.<uid>` no assistido; o prazo é
+  /// conferido aqui porque a limpeza do backend roda de hora em hora (as
+  /// regras do Firestore já bloqueiam tarefas e chat de quem venceu). Uma
+  /// falha aqui não esconde os perfis próprios.
+  Future<List<CareRecipientModel>> _fetchSharedCareRecipients(
+    String uid,
+  ) async {
+    try {
+      final snapshot = await _firestore
+          .collection('care_recipients')
+          .where('accessUids', arrayContains: uid)
+          .get();
+      final now = DateTime.now();
+      return snapshot.docs
+          .where((doc) {
+            final access = doc.data()['access'];
+            final grant = access is Map ? access[uid] : null;
+            final expiresAt = grant is Map ? grant['expiresAt'] : null;
+            return expiresAt is! Timestamp || expiresAt.toDate().isAfter(now);
+          })
+          .map(
+            (doc) => CareRecipientModel.fromJson(doc.data()).copyWith(
+              isShared: true,
+            ),
+          )
+          .toList();
+    } catch (_) {
+      return const [];
+    }
   }
 
   /// Adds a new Care Recipient to the Caregiver's profile list in Firestore.

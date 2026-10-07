@@ -233,6 +233,15 @@ class _EmptyState extends StatelessWidget {
             color: AppColors.textSecondary,
           ),
         ),
+        // Quem foi convidado por outra pessoa entra por aqui.
+        TextButton.icon(
+          onPressed: () => context.push(AppRoutes.redeemInvite),
+          icon: const Icon(Icons.vpn_key_outlined, color: AppColors.primary),
+          label: Text(
+            'Tenho um convite',
+            style: AppTypography.labelLarge.copyWith(color: AppColors.primary),
+          ),
+        ),
       ],
     );
   }
@@ -468,6 +477,41 @@ class _ProfileCard extends StatelessWidget {
 
             const SizedBox(height: AppSpacing.xs),
 
+            // ── Shared profile ────────────────────────────────────────────
+            // Shared by another caregiver: only the owner can delete it.
+            if (profile.isShared)
+              Semantics(
+                label: 'Perfil compartilhado com você',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.group_outlined,
+                        size: 14,
+                        color: AppColors.primaryDark,
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Text(
+                        'Compartilhado',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.primaryDark,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
             // ── Delete action ─────────────────────────────────────────────
             // Kept below the name so it is clearly separated from the avatar
             // tap target and is less likely to be triggered accidentally.

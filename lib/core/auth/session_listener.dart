@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/router/app_router.dart';
 import '../../features/auth/data/repositories/auth_repository.dart';
+import '../../features/invites/data/repositories/invites_repository.dart';
 import '../../shared/widgets/session_expired_bottom_sheet.dart';
 
 /// Global Session Listener widget that monitors authStateChanges from [AuthRepository].
@@ -18,10 +19,15 @@ class SessionListener extends StatefulWidget {
     super.key,
     required this.child,
     this.repository,
+    this.invitesRepository,
   });
 
   final Widget child;
   final AuthRepository? repository;
+
+  /// Aceita, ao entrar, os convites enviados ao e-mail verificado da conta.
+  /// `null` cria o repositório real na primeira vez que alguém entra.
+  final InvitesRepository? invitesRepository;
 
   @override
   State<SessionListener> createState() => _SessionListenerState();
@@ -31,6 +37,7 @@ class _SessionListenerState extends State<SessionListener> {
   StreamSubscription<User?>? _authSubscription;
   bool _isBottomSheetShowing = false;
   bool _wasAuthenticatedBefore = false;
+  String? _claimedForUid;
 
   static const List<String> _publicRoutes = [
     AppRoutes.splash,
@@ -55,7 +62,9 @@ class _SessionListenerState extends State<SessionListener> {
         if (user != null) {
           _wasAuthenticatedBefore = true;
           _isBottomSheetShowing = false;
+          _claimPendingInvites(user);
         } else {
+          _claimedForUid = null;
           // User logged out or session expired
           if (_wasAuthenticatedBefore) {
             _wasAuthenticatedBefore = false;
@@ -63,6 +72,19 @@ class _SessionListenerState extends State<SessionListener> {
           }
         }
       });
+    } catch (_) {}
+  }
+
+  /// Uma vez por conta e por abertura do app. Quem decide se o e-mail está
+  /// verificado e se há convite é o backend; aqui é só o gatilho, e uma
+  /// falha não pode atrapalhar o login.
+  void _claimPendingInvites(User user) {
+    try {
+      final uid = user.uid;
+      if (_claimedForUid == uid) return;
+      _claimedForUid = uid;
+      final invites = widget.invitesRepository ?? InvitesRepository();
+      unawaited(invites.claimPendingInvites().then((_) {}, onError: (_) {}));
     } catch (_) {}
   }
 

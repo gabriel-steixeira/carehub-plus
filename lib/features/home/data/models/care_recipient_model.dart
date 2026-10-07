@@ -13,7 +13,12 @@ class CareRecipientModel extends Equatable {
     this.type = 'person',
     this.dateOfBirth,
     this.recipientType,
+    this.isShared = false,
   });
+
+  /// `true` when another caregiver shared this profile with the signed-in
+  /// account by invite. Set by the repository; never saved to Firestore.
+  final bool isShared;
 
   final String id;
   final String name;
@@ -80,8 +85,10 @@ class CareRecipientModel extends Equatable {
     String? type,
     CareRecipientType? recipientType,
     DateTime? dateOfBirth,
+    bool? isShared,
   }) {
     return CareRecipientModel(
+      isShared: isShared ?? this.isShared,
       id: id ?? this.id,
       name: name ?? this.name,
       photoUrl: photoUrl ?? this.photoUrl,
@@ -104,5 +111,6 @@ class CareRecipientModel extends Equatable {
         type,
         recipientType,
         dateOfBirth,
+        isShared,
       ];
 }

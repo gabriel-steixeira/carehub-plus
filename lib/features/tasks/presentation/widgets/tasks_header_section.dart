@@ -29,7 +29,9 @@ class TasksHeaderSection extends StatelessWidget {
 
   final int pendingCount;
   final int completedCount;
-  final VoidCallback onCreateTask;
+
+  /// `null` esconde o botão "Nova" (acesso só de visualização).
+  final VoidCallback? onCreateTask;
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +57,7 @@ class TasksHeaderSection extends StatelessWidget {
             ),
           ],
         ),
-        _NewTaskButton(onPressed: onCreateTask),
+        if (onCreateTask != null) _NewTaskButton(onPressed: onCreateTask!),
       ],
     );
   }

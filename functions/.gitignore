@@ -1,0 +1,11 @@
+# Dependências e saída do compilador
+node_modules/
+lib/
+lib-test/
+
+# Parâmetros e segredos locais (nunca versionar)
+.env
+.env.*
+!.env.example
+.secret.local
+.runtimeconfig.json

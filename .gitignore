@@ -52,4 +52,24 @@ material/
 /android/build/
 
 # API Keys sensíveis (NUNCA commitar!)
-lib/core/config/gemini_config.dart
+# Use env.example.json como modelo e rode com --dart-define-from-file=env.json
+env.json
+
+# Credenciais de máquina e chaves privadas (NUNCA commitar!)
+# Rede de proteção caso alguém salve uma chave dentro do projeto por engano.
+*adminsdk*.json
+*service-account*.json
+*service_account*.json
+*credentials*.json
+*.pem
+*.p12
+*.p8
+*.key
+*.keystore
+*.jks
+android/key.properties
+functions/.secret.local
+.env
+.env.*
+!.env.example
+!functions/.env.example

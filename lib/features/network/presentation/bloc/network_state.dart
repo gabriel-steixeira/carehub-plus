@@ -11,6 +11,9 @@ class NetworkState extends Equatable {
     this.isUpdatingMember = false,
     this.updateSuccess = false,
     this.errorMessage,
+    this.lastInvite,
+    this.inviteError,
+    this.isChangingAccess = false,
   });
 
   final NetworkStatus status;
@@ -21,6 +24,15 @@ class NetworkState extends Equatable {
   final bool updateSuccess;
   final String? errorMessage;
 
+  /// Invite just created, ready for the caregiver to share.
+  final InviteShareEntity? lastInvite;
+
+  /// Why the invite (or a revoke/cancel) failed — the member itself was saved.
+  final String? inviteError;
+
+  /// A revoke or cancel is in progress.
+  final bool isChangingAccess;
+
   NetworkState copyWith({
     NetworkStatus? status,
     List<NetworkMemberModel>? members,
@@ -29,6 +41,10 @@ class NetworkState extends Equatable {
     bool? isUpdatingMember,
     bool? updateSuccess,
     String? errorMessage,
+    InviteShareEntity? lastInvite,
+    String? inviteError,
+    bool? isChangingAccess,
+    bool clearInvite = false,
   }) {
     return NetworkState(
       status: status ?? this.status,
@@ -38,6 +54,9 @@ class NetworkState extends Equatable {
       isUpdatingMember: isUpdatingMember ?? this.isUpdatingMember,
       updateSuccess: updateSuccess ?? this.updateSuccess,
       errorMessage: errorMessage ?? this.errorMessage,
+      lastInvite: clearInvite ? null : lastInvite ?? this.lastInvite,
+      inviteError: clearInvite ? null : inviteError ?? this.inviteError,
+      isChangingAccess: isChangingAccess ?? this.isChangingAccess,
     );
   }
 
@@ -50,5 +69,8 @@ class NetworkState extends Equatable {
         isUpdatingMember,
         updateSuccess,
         errorMessage,
+        lastInvite,
+        inviteError,
+        isChangingAccess,
       ];
 }

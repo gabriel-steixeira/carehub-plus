@@ -71,9 +71,35 @@ class SosCountdownResumedEvent extends SosEvent {
   const SosCountdownResumedEvent();
 }
 
-/// Cancela o alerta em andamento.
+/// Cancela o alerta em andamento (na janela de cancelamento ou aguardando
+/// resposta) e volta à montagem do pedido.
 class SosAlertCancelledEvent extends SosEvent {
   const SosAlertCancelledEvent();
+}
+
+/// Batida de um segundo do tempo de espera por resposta. Evento interno.
+class SosWaitingTickedEvent extends SosEvent {
+  const SosWaitingTickedEvent();
+}
+
+/// Nova situação do alerta lida do Firestore. Evento interno do BLoC.
+class SosAlertSnapshotReceivedEvent extends SosEvent {
+  const SosAlertSnapshotReceivedEvent({required this.snapshot});
+
+  final SosAlertSnapshotEntity snapshot;
+
+  @override
+  List<Object?> get props => [snapshot];
+}
+
+/// A escuta do alerta falhou. Evento interno do BLoC.
+class SosAlertWatchFailedEvent extends SosEvent {
+  const SosAlertWatchFailedEvent({required this.message});
+
+  final String message;
+
+  @override
+  List<Object?> get props => [message];
 }
 
 /// Encerra o atendimento aceito e volta ao início da tela.

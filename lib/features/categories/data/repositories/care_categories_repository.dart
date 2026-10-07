@@ -11,8 +11,10 @@
  * `care_categories`, então a escrita no Firestore ficava bloqueada em
  * silêncio. Local resolve agora sem depender de acesso ao console.
  * Quando o acesso ao Firebase for resolvido, é só reescrever o corpo dos
- * três métodos públicos para usar `FirebaseFirestore` — a assinatura da
- * classe e o contrato usado por `CareCategoriesBloc` não mudam.
+ * três métodos públicos para usar `FirebaseFirestore` em
+ * `caregivers/{uid}/care_categories` (a coleção solta `care_categories`
+ * está fechada nas regras) — a assinatura da classe e o contrato usado por
+ * `CareCategoriesBloc` não mudam.
  *
  * Author: Vitoria Lana
  * Created on: 23/08/2026

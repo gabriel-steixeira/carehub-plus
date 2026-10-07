@@ -22,6 +22,7 @@ import '../../../../shared/widgets/app_bottom_navigation.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_loading.dart';
+import '../../../invites/presentation/widgets/invite_share_sheet.dart';
 import '../../data/repositories/network_repository.dart';
 import '../bloc/network_bloc.dart';
 import '../widgets/add_member_bottom_sheet.dart';
@@ -70,7 +71,37 @@ class _NetworkView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: BlocBuilder<NetworkBloc, NetworkState>(
+      body: BlocConsumer<NetworkBloc, NetworkState>(
+        // Convite criado → mensagem pronta para enviar; falha no convite →
+        // aviso (o membro já está salvo).
+        listenWhen: (previous, current) =>
+            (current.lastInvite != null &&
+                current.lastInvite != previous.lastInvite) ||
+            (current.inviteError != null &&
+                current.inviteError != previous.inviteError),
+        listener: (context, state) {
+          final invite = state.lastInvite;
+          final bloc = context.read<NetworkBloc>();
+          if (invite != null) {
+            InviteShareSheet.show(
+              context,
+              invite,
+            ).whenComplete(() => bloc.add(const NetworkInviteHandledEvent()));
+            return;
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                state.inviteError!,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textInverse,
+                ),
+              ),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          bloc.add(const NetworkInviteHandledEvent());
+        },
         builder: (context, state) {
           if (state.status == NetworkStatus.loading && state.members.isEmpty) {
             return const AppLoading();
@@ -256,8 +287,8 @@ class _ImportantBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Contatos principais são notificados por SMS e chamadas de '
-                  'voz automáticas em caso de acionamento do botão SOS.',
+                  'Num SOS, avisamos as pessoas que você escolher pelo canal '
+                  'definido no cadastro de cada uma: WhatsApp, app ou os dois.',
                   style: AppTypography.bodyMedium.copyWith(
                     color: AppColors.textSecondary,
                     height: 1.5,

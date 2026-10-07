@@ -3,6 +3,57 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ------------------------------------------------------------------
+    // Acesso a um assistido
+    // ------------------------------------------------------------------
+    // Pode acessar um assistido: a dona (care_recipients.caregiverId) ou quem
+    // tem concessão ativa e dentro do prazo. As concessões são gravadas só
+    // pelo backend em `access_grants` e espelhadas no próprio assistido
+    // (`accessUids` + `access.<uid>`), para que cada decisão custe um único
+    // get(). Níveis: full (tudo), partial (só as áreas em `permissions`) e
+    // readonly (só leitura).
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function recipient(recipientId) {
+      return get(/databases/$(database)/documents/care_recipients/$(recipientId)).data;
+    }
+
+    function isOwner(recipientData) {
+      return signedIn() && recipientData.caregiverId == request.auth.uid;
+    }
+
+    function grantOf(recipientData) {
+      return recipientData.get('access', {}).get(request.auth.uid, null);
+    }
+
+    function hasActiveGrant(recipientData) {
+      let grant = grantOf(recipientData);
+      return signedIn() &&
+        request.auth.uid in recipientData.get('accessUids', []) &&
+        grant != null &&
+        (grant.get('expiresAt', null) == null || grant.expiresAt > request.time);
+    }
+
+    function canRead(recipientData) {
+      return isOwner(recipientData) || hasActiveGrant(recipientData);
+    }
+
+    // `area`: 'task' ou 'chat'.
+    function canWrite(recipientData, area) {
+      let grant = grantOf(recipientData);
+      return isOwner(recipientData) ||
+        (hasActiveGrant(recipientData) &&
+          (grant.level == 'full' ||
+            (grant.level == 'partial' && area in grant.get('permissions', []))));
+    }
+
+    function unchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
     // 1. Coleção de Cuidadores (Perfil do usuário autenticado)
     match /caregivers/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
@@ -38,31 +89,103 @@ service cloud.firestore {
           request.resource.data.createdAt == resource.data.createdAt;
         allow delete: if false;
       }
+
+      // Categorias de cuidado da própria cuidadora (usadas por Tarefas e
+      // Chat). Ficam dentro do documento dela para que os ids padrão
+      // ("health", "food"...) de contas diferentes não colidam. As padrão
+      // (isDefault) podem ser semeadas, mas não apagadas.
+      match /care_categories/{categoryId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create, update: if request.auth != null &&
+          request.auth.uid == userId &&
+          validCategory(request.resource.data);
+        allow delete: if request.auth != null &&
+          request.auth.uid == userId &&
+          resource.data.get('isDefault', false) != true;
+      }
+    }
+
+    function validCategory(data) {
+      return data.keys().hasOnly(['id', 'label', 'iconKey', 'colorKey', 'isDefault']) &&
+        data.label is string && data.label.size() >= 1 && data.label.size() <= 40 &&
+        data.iconKey is string && data.iconKey.size() <= 40 &&
+        data.colorKey is string && data.colorKey.size() <= 40 &&
+        data.get('isDefault', false) is bool;
     }
 
     // 2. Coleção de Assistidos e Pets (Care Recipients)
+    // `get` confere o prazo da concessão. Uma consulta não consegue provar o
+    // prazo, então `list` libera por dono ou por `accessUids`; o app esconde
+    // os expirados e os dados do assistido (tarefas, chat) sempre conferem o
+    // prazo. A lista de acesso e o dono só mudam pelo backend.
     match /care_recipients/{recipientId} {
-      allow read, write: if request.auth != null;
+      allow get: if canRead(resource.data);
+      allow list: if signedIn() &&
+        (resource.data.caregiverId == request.auth.uid ||
+          request.auth.uid in resource.data.get('accessUids', []));
+      allow create: if signedIn() &&
+        request.resource.data.caregiverId == request.auth.uid &&
+        !request.resource.data.keys().hasAny(['access', 'accessUids']);
+      allow update: if isOwner(resource.data) &&
+        unchanged(['caregiverId', 'access', 'accessUids']);
+      allow delete: if isOwner(resource.data);
     }
 
     // 3. Coleção de Tarefas e Lembretes
+    // `caregiverId` é sempre a dona do assistido (assim a consulta atual da
+    // dona continua valendo) e `createdBy`, quando existe, é quem criou.
     match /tasks/{taskId} {
-      allow read, write: if request.auth != null;
+      allow read: if signedIn() &&
+        (resource.data.caregiverId == request.auth.uid ||
+          canRead(recipient(resource.data.careRecipientId)));
+      allow create: if signedIn() &&
+        request.resource.data.careRecipientId is string &&
+        request.resource.data.caregiverId ==
+          recipient(request.resource.data.careRecipientId).caregiverId &&
+        canWrite(recipient(request.resource.data.careRecipientId), 'task') &&
+        (!('createdBy' in request.resource.data) ||
+          request.resource.data.createdBy == request.auth.uid);
+      allow update: if signedIn() &&
+        unchanged(['caregiverId', 'careRecipientId', 'createdBy']) &&
+        (resource.data.caregiverId == request.auth.uid ||
+          canWrite(recipient(resource.data.careRecipientId), 'task'));
+      allow delete: if signedIn() &&
+        (resource.data.caregiverId == request.auth.uid ||
+          canWrite(recipient(resource.data.careRecipientId), 'task'));
     }
 
     // 4. Coleção da Rede de Apoio
     // Cada membro pertence ao cuidador autenticado. Quando vinculado a um
     // perfil, o perfil também precisa pertencer ao mesmo cuidador.
+    // `alertChannels` (opcional): por onde o membro recebe SOS e tarefa
+    // atribuída. Ausente vale como WhatsApp e app (comportamento anterior).
+    function validAlertChannels(data) {
+      return !('alertChannels' in data) ||
+        (data.alertChannels is list &&
+          data.alertChannels.size() > 0 &&
+          data.alertChannels.hasOnly(['whatsapp', 'app']));
+    }
+
+    // Leitura: a dona do membro, ou a dona do assistido ao qual ele está
+    // vinculado. São a mesma pessoa (o create abaixo exige isso); o segundo
+    // caminho existe para que consultas filtradas só por `careRecipientId`
+    // (contagem do dashboard) sejam aceitas.
+    // Quem tem permissão de SOS num assistido compartilhado também lê a rede
+    // dele, para escolher quem avisar (o mesmo que a dona vê na tela de SOS).
     match /network_members/{memberId} {
       allow read: if request.auth != null &&
-        resource.data.caregiverId == request.auth.uid;
+        (resource.data.caregiverId == request.auth.uid ||
+          (resource.data.careRecipientId is string &&
+            canWrite(recipient(resource.data.careRecipientId), 'sos')));
       allow create: if request.auth != null &&
         request.resource.data.caregiverId == request.auth.uid &&
+        validAlertChannels(request.resource.data) &&
         (request.resource.data.careRecipientId == null ||
           get(/databases/$(database)/documents/care_recipients/$(request.resource.data.careRecipientId)).data.caregiverId == request.auth.uid);
       allow update: if request.auth != null &&
         resource.data.caregiverId == request.auth.uid &&
         request.resource.data.caregiverId == request.auth.uid &&
+        validAlertChannels(request.resource.data) &&
         (request.resource.data.careRecipientId == null ||
           get(/databases/$(database)/documents/care_recipients/$(request.resource.data.careRecipientId)).data.caregiverId == request.auth.uid);
       allow delete: if request.auth != null &&
@@ -70,19 +193,43 @@ service cloud.firestore {
     }
 
     // 5. Coleções de Chat e Mensagens da Equipe
-    match /chat_rooms/{document=**} {
-      allow read, write: if request.auth != null;
+    // A sala não grava dono: o acesso vem do assistido (`careRecipientId`).
+    // Consultas sem filtro por assistido são negadas.
+    match /chat_rooms/{roomId} {
+      allow read: if signedIn() &&
+        canRead(recipient(resource.data.careRecipientId));
+      allow create: if signedIn() &&
+        request.resource.data.careRecipientId is string &&
+        canWrite(recipient(request.resource.data.careRecipientId), 'chat');
+      allow update: if signedIn() &&
+        unchanged(['careRecipientId']) &&
+        canWrite(recipient(resource.data.careRecipientId), 'chat');
+      allow delete: if signedIn() &&
+        isOwner(recipient(resource.data.careRecipientId));
+
+      // Mensagens: lê quem acessa o assistido; envia só em nome próprio e
+      // com permissão de chat. Ninguém edita nem apaga pelo app.
+      function roomRecipient() {
+        return recipient(get(/databases/$(database)/documents/chat_rooms/$(roomId)).data.careRecipientId);
+      }
+
+      match /messages/{messageId} {
+        allow read: if signedIn() && canRead(roomRecipient());
+        allow create: if signedIn() &&
+          request.resource.data.senderId == request.auth.uid &&
+          canWrite(roomRecipient(), 'chat');
+        allow update, delete: if false;
+      }
     }
 
-    // 6. Categorias de Cuidado (compartilhadas entre Tarefas e Chat)
-    // PENDENTE DE PUBLICAÇÃO: esta regra ainda não foi enviada ao Firebase
-    // (falta acesso de administrador ao projeto "carehub-plus" nesta
-    // máquina). Enquanto isso, CareCategoriesRepository guarda as
-    // categorias localmente (shared_preferences). Quando o acesso for
-    // resolvido, publicar esta regra com `firebase deploy --only
-    // firestore:rules` e voltar o repositório para Firestore.
+    // 6. Categorias de Cuidado
+    // As categorias são de cada cuidadora e vivem em
+    // caregivers/{uid}/care_categories (seção 1). A coleção solta fica
+    // fechada: antes ela aceitava gravação de qualquer conta logada.
+    // CareCategoriesRepository ainda guarda as categorias no aparelho
+    // (shared_preferences); ao migrar para o Firestore, usar o caminho acima.
     match /care_categories/{categoryId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
 
     // 7. Conteúdo institucional compartilhado
@@ -102,6 +249,118 @@ service cloud.firestore {
     match /subscriptionPlans/{planId} {
       allow read: if request.auth != null;
       allow write: if false;
+    }
+
+    // 9. Alertas de SOS (disparam o aviso por WhatsApp no backend)
+    // O app cria o alerta como "pending" e muda para "dispatched" quando a
+    // janela de cancelamento termina, ou para "cancelled". O aceite
+    // ("accepted") só é gravado pelo backend, a partir da resposta no WhatsApp.
+    // O alerta pertence sempre à dona (`caregiverId`). Uma pessoa convidada
+    // com permissão de SOS pode abri-lo em nome dela, gravando o próprio UID
+    // em `requestedByUid`; ela acompanha e cancela o pedido que abriu.
+    function isSosParty(data) {
+      return data.caregiverId == request.auth.uid ||
+        data.get('requestedByUid', null) == request.auth.uid;
+    }
+
+    function canOpenSos(data) {
+      return data.caregiverId == request.auth.uid ||
+        (data.careRecipientId is string &&
+          data.get('requestedByUid', null) == request.auth.uid &&
+          data.caregiverId == recipient(data.careRecipientId).caregiverId &&
+          canWrite(recipient(data.careRecipientId), 'sos'));
+    }
+
+    match /sos_alerts/{alertId} {
+      allow read: if signedIn() && isSosParty(resource.data);
+      allow create: if signedIn() &&
+        canOpenSos(request.resource.data) &&
+        request.resource.data.status in ['pending', 'dispatched'] &&
+        request.resource.data.notifiedMemberIds is list &&
+        request.resource.data.notifiedMemberIds.size() > 0 &&
+        request.resource.data.notifiedMemberIds.size() <= 10;
+      allow update: if signedIn() &&
+        isSosParty(resource.data) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'updatedAt']) &&
+        ((resource.data.status == 'pending' &&
+            request.resource.data.status in ['dispatched', 'cancelled']) ||
+          (resource.data.status in ['dispatched', 'accepted'] &&
+            request.resource.data.status == 'cancelled'));
+      allow delete: if false;
+    }
+
+    // 10. Histórico do WhatsApp — gravado só pelo backend (Admin SDK).
+    // O cuidador pode consultar as mensagens da própria rede.
+    match /whatsapp_messages/{messageId} {
+      allow read: if request.auth != null &&
+        resource.data.caregiverId == request.auth.uid;
+      allow write: if false;
+    }
+
+    // 11. Controle interno do backend (contexto, cota e travas de envio).
+    match /whatsapp_contacts/{contactKey} {
+      allow read, write: if false;
+    }
+    match /whatsapp_quota/{quotaId} {
+      allow read, write: if false;
+    }
+    match /whatsapp_dispatch_locks/{lockId} {
+      allow read, write: if false;
+    }
+
+    // 11b. Acesso compartilhado — gravado só pelo backend.
+    // Concessão: a dona e a própria pessoa convidada podem consultar.
+    match /access_grants/{grantId} {
+      allow read: if signedIn() &&
+        (resource.data.ownerId == request.auth.uid ||
+          resource.data.principalUid == request.auth.uid);
+      allow write: if false;
+    }
+    // Convite: só a dona consulta (o código fica apenas como hash).
+    match /invites/{inviteId} {
+      allow read: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow write: if false;
+    }
+    // Controle interno das assistentes e do WhatsApp.
+    match /assistant_sessions/{sessionId} {
+      allow read, write: if false;
+    }
+    match /ai_quota/{quotaId} {
+      allow read, write: if false;
+    }
+    match /rate_limits/{limitId} {
+      allow read, write: if false;
+    }
+    match /whatsapp_participants/{contactKey} {
+      allow read, write: if false;
+    }
+    match /owner_whatsapp_links/{contactKey} {
+      allow read, write: if false;
+    }
+
+    // 12. Notificações do app (sino e lista) — criadas só pelo backend.
+    // Cada usuário lê as próprias e só pode marcar como lida.
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null &&
+        resource.data.recipientUid == request.auth.uid;
+      allow update: if request.auth != null &&
+        resource.data.recipientUid == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['readAt']);
+      allow create, delete: if false;
+    }
+
+    // 13. Tokens de push (FCM) por aparelho. O id do documento é o token.
+    // Um aparelho troca de dono quando outra conta entra nele; o token só é
+    // lido pelo backend.
+    match /push_tokens/{token} {
+      allow create, update: if request.auth != null &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.keys().hasOnly(['uid', 'platform', 'updatedAt']);
+      allow delete: if request.auth != null &&
+        resource.data.uid == request.auth.uid;
+      allow read: if false;
     }
 
   }

@@ -53,12 +53,15 @@ class ChatSortChangedEvent extends ChatEvent {
 }
 
 class ChatOpenRoomEvent extends ChatEvent {
-  const ChatOpenRoomEvent({required this.roomId});
+  const ChatOpenRoomEvent({required this.roomId, this.careRecipientId});
 
   final String roomId;
 
+  /// Perfil da sala — define se a conta pode escrever nela.
+  final String? careRecipientId;
+
   @override
-  List<Object?> get props => [roomId];
+  List<Object?> get props => [roomId, careRecipientId];
 }
 
 class ChatSendMessageEvent extends ChatEvent {

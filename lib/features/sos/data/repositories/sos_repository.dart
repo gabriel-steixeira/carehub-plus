@@ -13,7 +13,8 @@
  * Squad: CareHub Plus
  */
 
-import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../../assistants/data/repositories/caregiver_avatar_repository.dart';
@@ -23,7 +24,7 @@ import '../../../network/data/models/network_member_model.dart';
 import '../../../network/data/repositories/network_repository.dart';
 import '../../../tasks/data/models/task_model.dart';
 import '../../../tasks/data/repositories/tasks_repository.dart';
-import '../../domain/entities/sos_acceptance_entity.dart';
+import '../../domain/entities/sos_alert_snapshot_entity.dart';
 import '../../domain/entities/sos_help_request_entity.dart';
 
 /// Fachada de dados do SOS: leitura da tela e ciclo de vida do alerta.
@@ -33,27 +34,37 @@ class SosRepository {
     TasksRepository? tasksRepository,
     NetworkRepository? networkRepository,
     CaregiverAvatarRepository? caregiverAvatarRepository,
-    Random? random,
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
   }) : _homeRepository = homeRepository ?? HomeRepository(),
        _tasksRepository = tasksRepository ?? TasksRepository(),
        _networkRepository = networkRepository ?? NetworkRepository(),
        _caregiverAvatarRepository =
            caregiverAvatarRepository ?? CaregiverAvatarRepository(),
-       _random = random ?? Random();
+       _firestore = firestore ?? FirebaseFirestore.instance,
+       _auth = auth ?? FirebaseAuth.instance;
 
   final HomeRepository _homeRepository;
   final TasksRepository _tasksRepository;
   final NetworkRepository _networkRepository;
   final CaregiverAvatarRepository _caregiverAvatarRepository;
-  final Random _random;
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
 
-  /// Tempo que a cuidadora tem para cancelar o alerta antes de a rede
-  /// responder. Vive aqui, e não na interface, porque é regra do fluxo.
+  /// Coleção observada pela Cloud Function que avisa a rede pelo WhatsApp.
+  static const String _alertsCollection = 'sos_alerts';
+
+  /// Ciclo de vida do alerta. O backend só envia o WhatsApp quando o status
+  /// vira [_statusDispatched]; um alerta cancelado antes disso não gera
+  /// mensagem.
+  static const String _statusPending = 'pending';
+  static const String _statusDispatched = 'dispatched';
+  static const String _statusAccepted = 'accepted';
+  static const String _statusCancelled = 'cancelled';
+
+  /// Tempo que a cuidadora tem para cancelar o alerta antes de o aviso sair
+  /// pelo WhatsApp. Vive aqui, e não na interface, porque é regra do fluxo.
   static const Duration cancellationWindow = Duration(seconds: 10);
-
-  /// Faixa de tempo estimado de chegada sorteada no MVP (em minutos).
-  static const int _minEtaMinutes = 3;
-  static const int _maxEtaMinutes = 9;
 
   /// Foto do cuidador autenticado para o cabeçalho. `null` quando a conta não
   /// tem foto — nesse caso o `AppHeader` mostra o avatar genérico.
@@ -80,11 +91,11 @@ class SosRepository {
     return tasks.where((task) => !task.isCompleted).toList();
   }
 
-  /// Registra o pedido de ajuda e devolve o id do alerta criado.
+  /// Registra o pedido de ajuda em `sos_alerts` como "pending" e devolve o id
+  /// do alerta criado.
   ///
-  /// **MVP:** o envio é simulado. Notificação real (push/SMS) depende de
-  /// Firebase Cloud Messaging, que ainda não está no projeto; quando entrar,
-  /// só este método muda — BLoC e telas continuam iguais.
+  /// O aviso pelo WhatsApp só sai quando a janela de cancelamento termina
+  /// (ver [dispatchAlert]), para que um cancelamento não gere mensagem.
   Future<String> notifySupportNetwork(SosHelpRequestEntity request) async {
     if (!request.isValid) {
       throw const AppException(
@@ -92,38 +103,149 @@ class SosRepository {
       );
     }
 
-    return 'sos_${DateTime.now().millisecondsSinceEpoch}';
-  }
+    final alertId = 'sos_${DateTime.now().millisecondsSinceEpoch}';
+    final now = DateTime.now().toIso8601String();
+    final uid = _currentUserId();
 
-  /// Sorteia quem da rede de apoio aceitou o chamado.
-  ///
-  /// **MVP:** sem backend para receber o aceite de verdade, um dos avisados é
-  /// escolhido aleatoriamente quando a janela de cancelamento termina.
-  Future<SosAcceptanceEntity> drawAcceptance(
-    SosHelpRequestEntity request,
-  ) async {
-    if (request.notifiedMemberIds.isEmpty) {
-      throw const AppException(
-        'Nenhuma pessoa da rede de apoio foi avisada neste alerta.',
+    try {
+      // O alerta pertence à dona do assistido. Num perfil compartilhado,
+      // `requestedByUid` registra quem pediu (as regras conferem os dois).
+      final owner = await _ownerOf(request.careRecipientId) ?? uid;
+      await _firestore.collection(_alertsCollection).doc(alertId).set({
+        'id': alertId,
+        'caregiverId': owner,
+        'requestedByUid': uid,
+        'requestedBy': 'uid:$uid',
+        if (owner != uid) 'requestedByName': _auth.currentUser?.displayName,
+        'careRecipientId': request.careRecipientId,
+        'taskId': request.taskId,
+        'taskTitle': request.taskTitle,
+        'notifiedMemberIds': request.notifiedMemberIds,
+        'status': _statusPending,
+        'createdAt': now,
+        'updatedAt': now,
+      });
+    } on FirebaseException catch (error) {
+      throw AppException(
+        'Não foi possível registrar o pedido de ajuda. Tente novamente.',
+        code: error.code,
       );
     }
 
-    final memberId = request
-        .notifiedMemberIds[_random.nextInt(request.notifiedMemberIds.length)];
-    final etaMinutes =
-        _minEtaMinutes + _random.nextInt(_maxEtaMinutes - _minEtaMinutes);
-
-    return SosAcceptanceEntity(memberId: memberId, etaMinutes: etaMinutes);
+    return alertId;
   }
 
-  /// Cancela um alerta em andamento.
-  ///
-  /// **MVP:** nada é persistido ainda, então o cancelamento só encerra o
-  /// pedido em memória. Mantido como método para o cancelamento ter um único
-  /// lugar quando o backend existir.
+  /// Chamado quando a janela de cancelamento termina: muda o alerta para
+  /// "dispatched", o que faz o backend enviar o WhatsApp para a rede.
+  Future<void> dispatchAlert(String alertId) async {
+    if (alertId.isEmpty) {
+      throw const AppException('Não há alerta em andamento para enviar.');
+    }
+    await _updateAlertStatus(alertId, _statusDispatched);
+  }
+
+  /// Acompanha o alerta em tempo real. Emite a cada resposta gravada pelo
+  /// webhook do WhatsApp ("Estou indo" / "Não posso") e quando o backend
+  /// termina o envio. Quem escuta deve cancelar a inscrição ao sair da tela.
+  Stream<SosAlertSnapshotEntity> watchAlert(String alertId) {
+    return _firestore
+        .collection(_alertsCollection)
+        .doc(alertId)
+        .snapshots()
+        .where((document) => document.exists)
+        .map((document) => _toSnapshot(document.data() ?? const {}))
+        .handleError((Object error) {
+          if (error is FirebaseException) {
+            throw AppException(
+              'Não foi possível acompanhar as respostas da rede de apoio.',
+              code: error.code,
+            );
+          }
+          throw error;
+        });
+  }
+
+  /// Cancela um alerta em andamento. Dentro da janela de cancelamento, impede
+  /// o envio pelo WhatsApp; depois dela, registra que o pedido foi encerrado.
   Future<void> cancelAlert(String alertId) async {
     if (alertId.isEmpty) {
       throw const AppException('Não há alerta em andamento para cancelar.');
     }
+    await _updateAlertStatus(alertId, _statusCancelled);
+  }
+
+  /// Converte o documento do Firestore no retrato de domínio. Campos ausentes
+  /// ou com tipo inesperado viram "sem informação" em vez de erro.
+  SosAlertSnapshotEntity _toSnapshot(Map<String, dynamic> data) {
+    final status = switch (data['status']) {
+      _statusPending => SosAlertStatus.pending,
+      _statusDispatched => SosAlertStatus.dispatched,
+      _statusAccepted => SosAlertStatus.accepted,
+      _statusCancelled => SosAlertStatus.cancelled,
+      _ => SosAlertStatus.unknown,
+    };
+
+    final responses = <String, SosMemberResponse>{};
+    final rawResponses = data['responses'];
+    if (rawResponses is Map) {
+      rawResponses.forEach((memberId, value) {
+        final response = switch (value) {
+          'accepted' => SosMemberResponse.accepted,
+          'declined' => SosMemberResponse.declined,
+          _ => null,
+        };
+        if (memberId is String && response != null) {
+          responses[memberId] = response;
+        }
+      });
+    }
+
+    final summary = data['whatsappSummary'];
+    final acceptedBy = data['acceptedByMemberId'];
+
+    return SosAlertSnapshotEntity(
+      status: status,
+      acceptedByMemberId: acceptedBy is String && acceptedBy.isNotEmpty
+          ? acceptedBy
+          : null,
+      responses: responses,
+      whatsappSent: summary is Map ? (summary['sent'] as num?)?.toInt() : null,
+      whatsappFailed: summary is Map
+          ? (summary['failed'] as num?)?.toInt()
+          : null,
+    );
+  }
+
+  Future<void> _updateAlertStatus(String alertId, String status) async {
+    try {
+      await _firestore.collection(_alertsCollection).doc(alertId).update({
+        'status': status,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    } on FirebaseException catch (error) {
+      throw AppException(
+        'Não foi possível atualizar o pedido de ajuda. Tente novamente.',
+        code: error.code,
+      );
+    }
+  }
+
+  Future<String?> _ownerOf(String careRecipientId) async {
+    if (careRecipientId.isEmpty) return null;
+    final recipient = await _firestore
+        .collection('care_recipients')
+        .doc(careRecipientId)
+        .get();
+    return recipient.data()?['caregiverId'] as String?;
+  }
+
+  String _currentUserId() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw const AppException(
+        'Usuário não autenticado. Faça login novamente.',
+      );
+    }
+    return user.uid;
   }
 }

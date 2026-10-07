@@ -18,7 +18,23 @@ class TasksState extends Equatable {
     this.isCreatingTask = false,
     this.createTaskSuccess = false,
     this.errorMessage,
+    this.readOnlyProfileIds = const {},
   });
+
+  /// Perfis compartilhados em que esta conta só visualiza tarefas
+  /// ("Apenas Visualização" ou Parcial sem tarefas).
+  final Set<String> readOnlyProfileIds;
+
+  /// A conta pode criar, concluir e excluir tarefas deste perfil.
+  bool canEditTasksOf(String? careRecipientId) =>
+      careRecipientId == null || !readOnlyProfileIds.contains(careRecipientId);
+
+  /// Vale para o perfil em que uma tarefa nova seria criada.
+  bool get canEditTasks => canEditTasksOf(
+    selectedProfileId != 'all' && selectedProfileId.isNotEmpty
+        ? selectedProfileId
+        : careRecipientId,
+  );
 
   final TasksStatus status;
   final List<TaskModel> tasks;
@@ -122,8 +138,10 @@ class TasksState extends Equatable {
     bool? isCreatingTask,
     bool? createTaskSuccess,
     String? errorMessage,
+    Set<String>? readOnlyProfileIds,
   }) {
     return TasksState(
+      readOnlyProfileIds: readOnlyProfileIds ?? this.readOnlyProfileIds,
       status: status ?? this.status,
       tasks: tasks ?? this.tasks,
       caregiver: caregiver ?? this.caregiver,
@@ -159,5 +177,6 @@ class TasksState extends Equatable {
         isCreatingTask,
         createTaskSuccess,
         errorMessage,
+        readOnlyProfileIds,
       ];
 }

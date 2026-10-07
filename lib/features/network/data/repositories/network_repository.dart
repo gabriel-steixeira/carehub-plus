@@ -34,12 +34,17 @@ class NetworkRepository {
     String? careRecipientId,
   }) async {
     try {
-      Query<Map<String, dynamic>> query = _firestore
-          .collection('network_members')
-          .where('caregiverId', isEqualTo: _currentUserId());
-      if (careRecipientId != null && careRecipientId.isNotEmpty) {
-        query = query.where('careRecipientId', isEqualTo: careRecipientId);
-      }
+      // Com perfil: busca pelo perfil — assim quem recebeu o perfil
+      // compartilhado com permissão de SOS também vê a rede dele (as regras
+      // do Firestore decidem quem pode). Sem perfil: só a rede da conta.
+      final uid = _currentUserId();
+      final query = careRecipientId != null && careRecipientId.isNotEmpty
+          ? _firestore
+                .collection('network_members')
+                .where('careRecipientId', isEqualTo: careRecipientId)
+          : _firestore
+                .collection('network_members')
+                .where('caregiverId', isEqualTo: uid);
       final snapshot = await query.get();
       return snapshot.docs
           .map((document) => NetworkMemberModel.fromJson(document.data()))
@@ -71,7 +76,12 @@ class NetworkRepository {
   Future<NetworkMemberModel> updateMember(NetworkMemberModel member) async {
     final data = member.toJson();
     data['caregiverId'] = _currentUserId();
-    await _firestore.collection('network_members').doc(member.id).set(data);
+    // Merge: the backend writes inviteStatus/grantId/accessExpiresAt on the
+    // same document, and a full overwrite here would erase them.
+    await _firestore
+        .collection('network_members')
+        .doc(member.id)
+        .set(data, SetOptions(merge: true));
     return NetworkMemberModel.fromJson(data);
   }
 

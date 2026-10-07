@@ -9,8 +9,12 @@ enum SosPhase {
   /// Montando o pedido: escolher a tarefa e quem avisar.
   composing,
 
-  /// Alerta enviado, aguardando resposta dentro da janela de cancelamento.
+  /// Alerta criado, dentro da janela de cancelamento (o WhatsApp ainda não
+  /// saiu).
   alerting,
+
+  /// WhatsApp enviado: aguardando alguém da rede responder.
+  waiting,
 
   /// Alguém da rede de apoio aceitou o chamado.
   accepted,
@@ -28,6 +32,8 @@ class SosState extends Equatable {
     this.members = const [],
     this.notifiedMemberIds = const {},
     this.secondsRemaining = 0,
+    this.secondsWaiting = 0,
+    this.alertSnapshot,
     this.acceptance,
     this.errorMessage,
   });
@@ -42,8 +48,25 @@ class SosState extends Equatable {
   final List<NetworkMemberModel> members;
   final Set<String> notifiedMemberIds;
   final int secondsRemaining;
+
+  /// Há quanto tempo o aviso saiu sem ninguém aceitar (etapa `waiting`).
+  final int secondsWaiting;
+
+  /// Última situação do alerta lida do Firestore (respostas e envio).
+  final SosAlertSnapshotEntity? alertSnapshot;
   final SosAcceptanceEntity? acceptance;
   final String? errorMessage;
+
+  /// Todos os avisados responderam "Não posso".
+  bool get everyoneDeclined {
+    final snapshot = alertSnapshot;
+    if (snapshot == null || notifiedMemberIds.isEmpty) return false;
+    return notifiedMemberIds.every(snapshot.hasDeclined);
+  }
+
+  /// Ninguém vai responder: todos recusaram ou nenhum aviso foi entregue.
+  bool get isWaitingOver =>
+      everyoneDeclined || (alertSnapshot?.deliveryFailedForAll ?? false);
 
   /// Tarefa escolhida, ou `null` quando nenhuma está selecionada (ou quando a
   /// tarefa pré-selecionada não pertence ao perfil atual).
@@ -85,6 +108,9 @@ class SosState extends Equatable {
     List<NetworkMemberModel>? members,
     Set<String>? notifiedMemberIds,
     int? secondsRemaining,
+    int? secondsWaiting,
+    SosAlertSnapshotEntity? alertSnapshot,
+    bool clearAlertSnapshot = false,
     SosAcceptanceEntity? acceptance,
     bool clearAcceptance = false,
     String? errorMessage,
@@ -102,6 +128,10 @@ class SosState extends Equatable {
       members: members ?? this.members,
       notifiedMemberIds: notifiedMemberIds ?? this.notifiedMemberIds,
       secondsRemaining: secondsRemaining ?? this.secondsRemaining,
+      secondsWaiting: secondsWaiting ?? this.secondsWaiting,
+      alertSnapshot: clearAlertSnapshot
+          ? null
+          : alertSnapshot ?? this.alertSnapshot,
       acceptance: clearAcceptance ? null : acceptance ?? this.acceptance,
       errorMessage:
           clearErrorMessage ? null : errorMessage ?? this.errorMessage,
@@ -120,6 +150,8 @@ class SosState extends Equatable {
         members,
         notifiedMemberIds,
         secondsRemaining,
+        secondsWaiting,
+        alertSnapshot,
         acceptance,
         errorMessage,
       ];

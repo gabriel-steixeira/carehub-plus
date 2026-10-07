@@ -495,7 +495,6 @@ class _MemberSelector extends StatelessWidget {
     final members = allMembers
         .where(
           (member) =>
-              member.careRecipientId == null ||
               member.careRecipientId == careRecipientId,
         )
         .toList();

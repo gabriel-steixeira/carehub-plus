@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../services/selected_profile_service.dart';
 import '../../../home/data/models/care_recipient_model.dart';
 import '../../../home/data/repositories/home_repository.dart';
+import '../../../invites/data/repositories/recipient_permissions_repository.dart';
 import '../../data/models/chat_message_model.dart';
 import '../../data/models/chat_room_model.dart';
 import '../../data/repositories/chat_repository.dart';
@@ -12,10 +13,14 @@ part 'chat_event.dart';
 part 'chat_state.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
-  ChatBloc({required ChatRepository repository, HomeRepository? homeRepository})
-    : _repository = repository,
-      _homeRepository = homeRepository ?? HomeRepository(),
-      super(const ChatState()) {
+  ChatBloc({
+    required ChatRepository repository,
+    HomeRepository? homeRepository,
+    RecipientPermissionsRepository? permissionsRepository,
+  }) : _repository = repository,
+       _homeRepository = homeRepository ?? HomeRepository(),
+       _permissionsRepository = permissionsRepository,
+       super(const ChatState()) {
     on<ChatLoadRoomsEvent>(_onLoadRooms);
     on<ChatSearchQueryChangedEvent>(_onSearchQueryChanged);
     on<ChatProfileChangedEvent>(_onProfileChanged);
@@ -28,6 +33,21 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   final ChatRepository _repository;
   final HomeRepository _homeRepository;
+
+  /// Criado sob demanda (evita tocar no Firebase em testes que não precisam).
+  RecipientPermissionsRepository? _permissionsRepository;
+
+  Future<bool> _canUseChat(String? careRecipientId) async {
+    if (careRecipientId == null || careRecipientId.isEmpty) return true;
+    try {
+      final permissions =
+          await (_permissionsRepository ??= RecipientPermissionsRepository())
+              .permissionsFor(careRecipientId);
+      return permissions.canUseChat;
+    } catch (_) {
+      return true; // as regras do Firestore continuam barrando
+    }
+  }
 
   Future<void> _onLoadRooms(
     ChatLoadRoomsEvent event,
@@ -59,6 +79,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           caregiverPhotoBase64: caregiver.photoBase64,
           careRecipientId: selectedProfileId,
           selectedProfileName: selectedProfile?.name,
+          canUseChat: await _canUseChat(selectedProfileId),
         ),
       );
     } catch (e) {
@@ -136,6 +157,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(
       state.copyWith(activeRoomId: event.roomId, status: ChatStatus.loading),
     );
+    if (event.careRecipientId != null) {
+      emit(state.copyWith(canUseChat: await _canUseChat(event.careRecipientId)));
+    }
     try {
       // Carrega a foto do cuidador se ainda não foi carregada
       if (state.caregiverPhotoUrl == null &&

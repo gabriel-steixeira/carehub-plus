@@ -202,6 +202,18 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                   ),
                   const SizedBox(height: AppSpacing.xl),
 
+                  // Acesso só de visualização: sem concluir nem excluir.
+                  if (!context.read<TasksBloc>().state.canEditTasksOf(
+                    task.careRecipientId,
+                  )) ...[
+                    Text(
+                      'Seu acesso a este perfil é só de visualização.',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                  ] else ...[
                   // Actions
                   AppButton(
                     label: task.isCompleted
@@ -235,6 +247,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                     },
                   ),
                   const SizedBox(height: AppSpacing.xl),
+                  ],
                 ],
               ),
             ),

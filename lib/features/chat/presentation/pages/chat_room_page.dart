@@ -21,6 +21,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
 import '../../../../shared/widgets/app_chat_input_bar.dart';
 import '../../../../shared/widgets/app_header.dart';
@@ -49,8 +50,12 @@ class ChatRoomPage extends StatelessWidget {
       providers: [
         BlocProvider(
           create: (context) =>
-              ChatBloc(repository: ChatRepository())
-                ..add(ChatOpenRoomEvent(roomId: room.id)),
+              ChatBloc(repository: ChatRepository())..add(
+                ChatOpenRoomEvent(
+                  roomId: room.id,
+                  careRecipientId: room.careRecipientId,
+                ),
+              ),
         ),
         BlocProvider(
           create: (context) =>
@@ -178,20 +183,37 @@ class _ChatRoomViewState extends State<ChatRoomView> {
                           ),
                         ),
                         Expanded(child: _buildMessages(category)),
-                        AppChatInputBar(
-                          controller: _textController,
-                          hintText: 'Digite uma mensagem...',
-                          sendButtonColor: AppColors.tintPink,
-                          onSend: _sendMessage,
-                          leading: IconButton(
-                            icon: Icon(
-                              Icons.health_and_safety_outlined,
-                              color: colorForCategory(category),
-                            ),
-                            tooltip: 'Enviar Nota de Saúde',
-                            onPressed: () =>
-                                _sendMessage(type: ChatMessageType.medicalNote),
-                          ),
+                        // Sem permissão de chat: lê, mas não escreve.
+                        BlocSelector<ChatBloc, ChatState, bool>(
+                          selector: (state) => state.canUseChat,
+                          builder: (context, canUseChat) => canUseChat
+                              ? AppChatInputBar(
+                                  controller: _textController,
+                                  hintText: 'Digite uma mensagem...',
+                                  sendButtonColor: AppColors.tintPink,
+                                  onSend: _sendMessage,
+                                  leading: IconButton(
+                                    icon: Icon(
+                                      Icons.health_and_safety_outlined,
+                                      color: colorForCategory(category),
+                                    ),
+                                    tooltip: 'Enviar Nota de Saúde',
+                                    onPressed: () => _sendMessage(
+                                      type: ChatMessageType.medicalNote,
+                                    ),
+                                  ),
+                                )
+                              : Padding(
+                                  padding: const EdgeInsets.all(AppSpacing.md),
+                                  child: Text(
+                                    'Seu acesso a este perfil é só de '
+                                    'leitura no chat.',
+                                    textAlign: TextAlign.center,
+                                    style: AppTypography.bodyMedium.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
                         ),
                       ],
                     );

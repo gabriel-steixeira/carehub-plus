@@ -1,8 +1,8 @@
 /*
  * CareHub Plus — SOS / Etapa 3: chamado aceito
  *
- * Última etapa do fluxo: mostra quem da rede de apoio aceitou o pedido, o tempo
- * estimado de chegada e os atalhos de contato. Ligar abre o discador do
+ * Última etapa do fluxo: mostra quem da rede de apoio aceitou o pedido (a
+ * resposta real, vinda do WhatsApp) e os atalhos de contato. Ligar abre o discador do
  * aparelho; o acompanhamento em mapa ainda não existe nesta versão e a tela diz
  * isso em vez de simular um recurso.
  *
@@ -70,7 +70,6 @@ class SosAcceptedView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final member = state.acceptedMember;
-    final etaMinutes = state.acceptance?.etaMinutes ?? 0;
 
     if (member == null) {
       return const AppEmptyView(
@@ -125,19 +124,19 @@ class SosAcceptedView extends StatelessWidget {
                     _CircleIconButton(
                       icon: Icons.chat_bubble_outline_rounded,
                       tooltip: 'Conversar com ${member.name}',
-                      onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                        _snackBar(
-                          'A conversa direta pelo SOS entra em uma próxima '
-                          'versão.',
-                        ),
-                      ),
+                      onPressed: () =>
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            _snackBar(
+                              'A conversa direta pelo SOS entra em uma próxima '
+                              'versão.',
+                            ),
+                          ),
                     ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.smMd),
                 Text(
-                  '${member.name} aceitou o chamado e deve chegar em '
-                  'aproximadamente $etaMinutes minutos.',
+                  '${member.name} respondeu "Estou indo" e está a caminho.',
                   textAlign: TextAlign.center,
                   style: AppTypography.bodyMedium.copyWith(
                     color: AppColors.textSecondary,

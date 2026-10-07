@@ -5,6 +5,7 @@ import '../../../../services/selected_profile_service.dart';
 import '../../../home/data/models/care_recipient_model.dart';
 import '../../../home/data/models/caregiver_model.dart';
 import '../../../home/data/repositories/home_repository.dart';
+import '../../../invites/data/repositories/recipient_permissions_repository.dart';
 import '../../data/models/task_frequency.dart';
 import '../../data/models/task_model.dart';
 import '../../data/repositories/tasks_repository.dart';
@@ -16,8 +17,10 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
   TasksBloc({
     required TasksRepository repository,
     HomeRepository? homeRepository,
+    RecipientPermissionsRepository? permissionsRepository,
   }) : _repository = repository,
        _homeRepository = homeRepository ?? HomeRepository(),
+       _permissionsRepository = permissionsRepository,
        super(TasksState(selectedDate: DateTime.now())) {
     on<TasksLoadEvent>(_onLoad);
     on<TasksFilterChangedEvent>(_onFilterChanged);
@@ -34,12 +37,60 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
   final TasksRepository _repository;
   final HomeRepository _homeRepository;
 
+  /// Criado sob demanda (evita tocar no Firebase em testes que não precisam).
+  RecipientPermissionsRepository? _permissionsRepository;
+
+  /// Perfis compartilhados em que a conta só visualiza tarefas. Os próprios
+  /// perfis nem são consultados. Em falha, libera: as regras do Firestore
+  /// continuam barrando a gravação.
+  Future<Set<String>> _readOnlyProfileIds(
+    List<CareRecipientModel> profiles,
+  ) async {
+    final shared = profiles.where((profile) => profile.isShared).toList();
+    if (shared.isEmpty) return const {};
+    try {
+      final repository =
+          _permissionsRepository ??= RecipientPermissionsRepository();
+      final results = await Future.wait(
+        shared.map((profile) => repository.permissionsFor(profile.id)),
+      );
+      return {
+        for (var i = 0; i < shared.length; i++)
+          if (!results[i].canEditTasks) shared[i].id,
+      };
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  /// Tarefas da própria conta + tarefas de cada perfil listado (inclui os
+  /// compartilhados por convite, cujas tarefas pertencem à dona deles).
+  Future<List<TaskModel>> _fetchAllTasks(
+    List<CareRecipientModel> profiles,
+  ) async {
+    final byId = <String, TaskModel>{
+      for (final task in await _repository.fetchTasks()) task.id: task,
+    };
+    for (final profile in profiles) {
+      try {
+        for (final task in await _repository.fetchTasks(
+          careRecipientId: profile.id,
+        )) {
+          byId[task.id] = task;
+        }
+      } catch (_) {
+        // Um perfil com acesso vencido não pode derrubar a lista inteira.
+      }
+    }
+    return byId.values.toList();
+  }
+
   Future<void> _onLoad(TasksLoadEvent event, Emitter<TasksState> emit) async {
     emit(state.copyWith(status: TasksStatus.loading));
     try {
       final caregiver = await _homeRepository.fetchCaregiver();
       final profiles = await _homeRepository.fetchCareRecipients();
-      final tasks = await _repository.fetchTasks();
+      final tasks = await _fetchAllTasks(profiles);
 
       // Resolve o perfil na ordem: id de navegação → perfil salvo pela seleção
       // do usuário → primeiro da lista. Evita que Tarefas "troque" de assistido
@@ -57,6 +108,7 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
           tasks: tasks,
           careRecipientId: resolvedProfileId,
           selectedProfileId: resolvedProfileId,
+          readOnlyProfileIds: await _readOnlyProfileIds(profiles),
         ),
       );
     } catch (e) {

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 /// Role/Permission in the Support Network
@@ -92,6 +93,51 @@ enum NetworkPermission {
   }
 }
 
+/// Channel through which a member receives SOS and assigned-task alerts.
+/// Chosen by the caregiver, independent of the member's [AccessLevel].
+enum AlertChannel {
+  whatsapp('WhatsApp', 'whatsapp'),
+  app('App', 'app');
+
+  const AlertChannel(this.label, this.value);
+  final String label;
+  final String value;
+
+  /// Both channels — the behaviour of members saved before this field existed.
+  static const List<AlertChannel> all = [AlertChannel.whatsapp, AlertChannel.app];
+
+  /// Reads the stored list; missing, empty or unknown values mean [all].
+  static List<AlertChannel> listFromJson(Object? raw) {
+    if (raw is! List) return all;
+    final channels = <AlertChannel>{
+      for (final value in raw.whereType<String>())
+        for (final channel in AlertChannel.values)
+          if (channel.value == value) channel,
+    };
+    return channels.isEmpty ? all : channels.toList();
+  }
+}
+
+/// Invite/access situation, written only by the backend (read-only here).
+enum MemberInviteStatus {
+  none('Sem convite', 'none'),
+  pending('Convite pendente', 'pending'),
+  active('Acesso ativo', 'active'),
+  expired('Acesso expirado', 'expired'),
+  revoked('Acesso removido', 'revoked');
+
+  const MemberInviteStatus(this.label, this.value);
+  final String label;
+  final String value;
+
+  static MemberInviteStatus fromValue(String? val) {
+    return MemberInviteStatus.values.firstWhere(
+      (e) => e.value == val,
+      orElse: () => MemberInviteStatus.none,
+    );
+  }
+}
+
 /// Model representing a support network member.
 class NetworkMemberModel extends Equatable {
   const NetworkMemberModel({
@@ -107,6 +153,10 @@ class NetworkMemberModel extends Equatable {
     this.photoUrl,
     this.isOnline = false,
     this.careRecipientId,
+    this.accessDurationHours,
+    this.alertChannels = AlertChannel.all,
+    this.inviteStatus = MemberInviteStatus.none,
+    this.accessExpiresAt,
   });
 
   final String id;
@@ -135,6 +185,32 @@ class NetworkMemberModel extends Equatable {
   /// Nulo em registros criados antes deste campo existir (retrocompatível).
   final String? careRecipientId;
 
+  /// How long the access lasts after the invite is accepted. `null` means
+  /// unlimited.
+  final int? accessDurationHours;
+
+  /// Where this member receives SOS and assigned-task alerts.
+  final List<AlertChannel> alertChannels;
+
+  /// Invite/access situation. Written by the backend; never sent by the app.
+  final MemberInviteStatus inviteStatus;
+
+  /// When the access ends. Written by the backend; `null` when unlimited or
+  /// not accepted yet.
+  final DateTime? accessExpiresAt;
+
+  /// [inviteStatus] taking the deadline into account: the backend only
+  /// marks "expired" in its hourly cleanup.
+  MemberInviteStatus effectiveInviteStatus([DateTime? now]) {
+    final expiresAt = accessExpiresAt;
+    if (inviteStatus == MemberInviteStatus.active &&
+        expiresAt != null &&
+        !expiresAt.isAfter(now ?? DateTime.now())) {
+      return MemberInviteStatus.expired;
+    }
+    return inviteStatus;
+  }
+
   factory NetworkMemberModel.fromJson(Map<String, dynamic> json) {
     return NetworkMemberModel(
       id: json['id'] as String,
@@ -149,7 +225,19 @@ class NetworkMemberModel extends Equatable {
       photoUrl: json['photoUrl'] as String?,
       isOnline: json['isOnline'] as bool? ?? false,
       careRecipientId: json['careRecipientId'] as String?,
+      accessDurationHours: (json['accessDurationHours'] as num?)?.toInt(),
+      alertChannels: AlertChannel.listFromJson(json['alertChannels']),
+      inviteStatus: MemberInviteStatus.fromValue(
+        json['inviteStatus'] as String?,
+      ),
+      accessExpiresAt: _dateFromJson(json['accessExpiresAt']),
     );
+  }
+
+  static DateTime? _dateFromJson(Object? raw) {
+    if (raw is Timestamp) return raw.toDate();
+    if (raw is String) return DateTime.tryParse(raw);
+    return null;
   }
 
   /// Reads the stored permission list, dropping anything unrecognized.
@@ -176,6 +264,9 @@ class NetworkMemberModel extends Equatable {
       'photoUrl': photoUrl,
       'isOnline': isOnline,
       'careRecipientId': careRecipientId,
+      'accessDurationHours': accessDurationHours,
+      'alertChannels': alertChannels.map((c) => c.value).toList(),
+      // inviteStatus / accessExpiresAt are backend-owned and never written.
     };
   }
 
@@ -193,5 +284,9 @@ class NetworkMemberModel extends Equatable {
         photoUrl,
         isOnline,
         careRecipientId,
+        accessDurationHours,
+        alertChannels,
+        inviteStatus,
+        accessExpiresAt,
       ];
 }

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../../../core/errors/app_exception.dart';
 import '../../../home/data/models/caregiver_model.dart';
 
 /// Settings and preferences repository with real Firebase integration.
@@ -21,22 +22,17 @@ class SettingsRepository {
       if (doc.exists && doc.data() != null) {
         return CaregiverModel.fromJson(doc.data()!);
       }
+      // Sem foto, o AppHeader mostra o avatar genérico — nunca uma foto de
+      // outra pessoa no lugar da cuidadora.
       return CaregiverModel(
         id: user.uid,
         name: user.displayName ?? 'Cuidador',
-        email: user.email ?? 'cuidador@carehub.com',
-        photoUrl: user.photoURL ??
-            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150',
+        email: user.email ?? '',
+        photoUrl: user.photoURL,
       );
     }
 
-    return const CaregiverModel(
-      id: 'caregiver_123',
-      name: 'Maria Oliveira',
-      email: 'maria@carehub.com',
-      photoUrl:
-          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150',
-    );
+    throw const AppException('Usuário não autenticado. Faça login novamente.');
   }
 
   Future<Map<String, bool>> fetchNotificationSettings() async {

@@ -23,6 +23,9 @@ class NetworkAddMemberEvent extends NetworkEvent {
     this.imageFile,
     this.removePhoto = false,
     this.careRecipientId,
+    this.accessDurationHours,
+    this.alertChannels = AlertChannel.all,
+    this.inviteChannel,
   });
 
   final String name;
@@ -36,6 +39,13 @@ class NetworkAddMemberEvent extends NetworkEvent {
   final bool removePhoto;
   final String? careRecipientId;
 
+  /// `null` = unlimited.
+  final int? accessDurationHours;
+  final List<AlertChannel> alertChannels;
+
+  /// Channel of the invite to create after saving; `null` = don't invite now.
+  final InviteChannel? inviteChannel;
+
   @override
   List<Object?> get props => [
     name,
@@ -48,6 +58,9 @@ class NetworkAddMemberEvent extends NetworkEvent {
     imageFile,
     removePhoto,
     careRecipientId,
+    accessDurationHours,
+    alertChannels,
+    inviteChannel,
   ];
 }
 
@@ -64,6 +77,9 @@ class NetworkUpdateMemberEvent extends NetworkEvent {
     this.imageFile,
     this.removePhoto = false,
     this.careRecipientId,
+    this.accessDurationHours,
+    this.alertChannels = AlertChannel.all,
+    this.inviteChannel,
   });
 
   final String memberId;
@@ -78,6 +94,13 @@ class NetworkUpdateMemberEvent extends NetworkEvent {
   final bool removePhoto;
   final String? careRecipientId;
 
+  /// `null` = unlimited.
+  final int? accessDurationHours;
+  final List<AlertChannel> alertChannels;
+
+  /// New invite to send after saving (e.g. resend); `null` = don't send.
+  final InviteChannel? inviteChannel;
+
   @override
   List<Object?> get props => [
     memberId,
@@ -91,6 +114,9 @@ class NetworkUpdateMemberEvent extends NetworkEvent {
     imageFile,
     removePhoto,
     careRecipientId,
+    accessDurationHours,
+    alertChannels,
+    inviteChannel,
   ];
 }
 
@@ -101,4 +127,29 @@ class NetworkRemoveMemberEvent extends NetworkEvent {
 
   @override
   List<Object?> get props => [memberId];
+}
+
+/// Removes the member's access right away (app and WhatsApp).
+class NetworkRevokeAccessEvent extends NetworkEvent {
+  const NetworkRevokeAccessEvent({required this.memberId});
+
+  final String memberId;
+
+  @override
+  List<Object?> get props => [memberId];
+}
+
+/// Cancels the member's pending invite.
+class NetworkCancelInviteEvent extends NetworkEvent {
+  const NetworkCancelInviteEvent({required this.memberId});
+
+  final String memberId;
+
+  @override
+  List<Object?> get props => [memberId];
+}
+
+/// The share sheet was shown; clears the invite from the state.
+class NetworkInviteHandledEvent extends NetworkEvent {
+  const NetworkInviteHandledEvent();
 }

@@ -24,6 +24,7 @@ import '../../../network/data/models/network_member_model.dart';
 import '../../../tasks/data/models/task_model.dart';
 import '../../data/repositories/sos_repository.dart';
 import '../../domain/entities/sos_acceptance_entity.dart';
+import '../../domain/entities/sos_alert_snapshot_entity.dart';
 import '../../domain/entities/sos_help_request_entity.dart';
 
 part 'sos_event.dart';
@@ -43,6 +44,9 @@ class SosBloc extends Bloc<SosEvent, SosState> {
     on<SosCountdownResumedEvent>(_onCountdownResumed);
     on<SosAlertCancelledEvent>(_onAlertCancelled);
     on<SosAlertRestartedEvent>(_onAlertRestarted);
+    on<SosWaitingTickedEvent>(_onWaitingTicked);
+    on<SosAlertSnapshotReceivedEvent>(_onAlertSnapshotReceived);
+    on<SosAlertWatchFailedEvent>(_onAlertWatchFailed);
   }
 
   final SosRepository _repository;
@@ -50,13 +54,19 @@ class SosBloc extends Bloc<SosEvent, SosState> {
   /// Contagem regressiva da janela de cancelamento.
   Timer? _countdown;
 
-  /// Alerta em andamento e o pedido que o originou.
+  /// Relógio do tempo de espera por resposta, depois do envio.
+  Timer? _waitingTicker;
+
+  /// Escuta em tempo real do documento do alerta no Firestore.
+  StreamSubscription<SosAlertSnapshotEntity>? _alertSubscription;
+
+  /// Alerta em andamento.
   String? _alertId;
-  SosHelpRequestEntity? _pendingRequest;
 
   @override
-  Future<void> close() {
+  Future<void> close() async {
     _countdown?.cancel();
+    await _stopWaiting();
     return super.close();
   }
 
@@ -186,7 +196,6 @@ class SosBloc extends Bloc<SosEvent, SosState> {
       if (isClosed) return;
 
       _alertId = alertId;
-      _pendingRequest = request;
       emit(
         state.copyWith(
           phase: SosPhase.alerting,
@@ -213,20 +222,116 @@ class SosBloc extends Bloc<SosEvent, SosState> {
       return;
     }
 
-    // Janela de cancelamento encerrada: a rede de apoio responde.
+    // Janela de cancelamento encerrada: libera o WhatsApp e passa a esperar
+    // a resposta real da rede de apoio.
     _countdown?.cancel();
     emit(state.copyWith(secondsRemaining: 0));
 
-    final request = _pendingRequest;
-    if (request == null) return;
+    final alertId = _alertId;
+    if (alertId == null) return;
 
     try {
-      final acceptance = await _repository.drawAcceptance(request);
+      await _repository.dispatchAlert(alertId);
       if (isClosed) return;
-      emit(state.copyWith(phase: SosPhase.accepted, acceptance: acceptance));
+      emit(
+        state.copyWith(
+          phase: SosPhase.waiting,
+          secondsWaiting: 0,
+          clearAlertSnapshot: true,
+        ),
+      );
+      _startWaiting(alertId);
     } on AppException catch (e) {
       emit(state.copyWith(errorMessage: e.message));
     }
+  }
+
+  void _onWaitingTicked(SosWaitingTickedEvent event, Emitter<SosState> emit) {
+    if (state.phase != SosPhase.waiting || state.isWaitingOver) return;
+    emit(state.copyWith(secondsWaiting: state.secondsWaiting + 1));
+  }
+
+  Future<void> _onAlertSnapshotReceived(
+    SosAlertSnapshotReceivedEvent event,
+    Emitter<SosState> emit,
+  ) async {
+    if (state.phase != SosPhase.waiting) return;
+    final snapshot = event.snapshot;
+
+    if (snapshot.isAccepted) {
+      await _stopWaiting();
+      _alertId = null;
+      emit(
+        state.copyWith(
+          phase: SosPhase.accepted,
+          alertSnapshot: snapshot,
+          acceptance: SosAcceptanceEntity(
+            memberId: snapshot.acceptedByMemberId!,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (snapshot.status == SosAlertStatus.cancelled) {
+      // Cancelado fora desta tela (outro aparelho): volta ao início.
+      await _stopWaiting();
+      _alertId = null;
+      emit(
+        state.copyWith(
+          phase: SosPhase.composing,
+          secondsWaiting: 0,
+          clearAlertSnapshot: true,
+          clearAcceptance: true,
+        ),
+      );
+      return;
+    }
+
+    emit(state.copyWith(alertSnapshot: snapshot));
+    // Todos recusaram ou nada foi entregue: o relógio para, mas a escuta
+    // continua — quem recusou ainda pode mudar de ideia e aceitar.
+    if (state.isWaitingOver) _waitingTicker?.cancel();
+  }
+
+  void _onAlertWatchFailed(
+    SosAlertWatchFailedEvent event,
+    Emitter<SosState> emit,
+  ) {
+    emit(state.copyWith(errorMessage: event.message));
+  }
+
+  /// Liga o relógio de espera e a escuta do alerta no Firestore.
+  void _startWaiting(String alertId) {
+    _waitingTicker?.cancel();
+    _waitingTicker = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => add(const SosWaitingTickedEvent()),
+    );
+
+    _alertSubscription?.cancel();
+    _alertSubscription = _repository
+        .watchAlert(alertId)
+        .listen(
+          (snapshot) => add(SosAlertSnapshotReceivedEvent(snapshot: snapshot)),
+          onError: (Object error) => add(
+            SosAlertWatchFailedEvent(
+              message: error is AppException
+                  ? error.message
+                  : 'Não foi possível acompanhar as respostas da rede de '
+                        'apoio.',
+            ),
+          ),
+        );
+  }
+
+  /// Desliga o relógio e a escuta. Sem isso, a escuta continuaria consumindo
+  /// leituras do Firestore depois de sair da tela.
+  Future<void> _stopWaiting() async {
+    _waitingTicker?.cancel();
+    _waitingTicker = null;
+    await _alertSubscription?.cancel();
+    _alertSubscription = null;
   }
 
   /// Enquanto a confirmação de cancelamento está aberta, o tempo não corre —
@@ -251,14 +356,16 @@ class SosBloc extends Bloc<SosEvent, SosState> {
     Emitter<SosState> emit,
   ) async {
     _countdown?.cancel();
+    await _stopWaiting();
     final alertId = _alertId;
     _alertId = null;
-    _pendingRequest = null;
 
     emit(
       state.copyWith(
         phase: SosPhase.composing,
         secondsRemaining: 0,
+        secondsWaiting: 0,
+        clearAlertSnapshot: true,
         clearAcceptance: true,
         clearErrorMessage: true,
       ),
@@ -272,15 +379,20 @@ class SosBloc extends Bloc<SosEvent, SosState> {
     }
   }
 
-  void _onAlertRestarted(SosAlertRestartedEvent event, Emitter<SosState> emit) {
+  Future<void> _onAlertRestarted(
+    SosAlertRestartedEvent event,
+    Emitter<SosState> emit,
+  ) async {
     _countdown?.cancel();
+    await _stopWaiting();
     _alertId = null;
-    _pendingRequest = null;
 
     emit(
       state.copyWith(
         phase: SosPhase.composing,
         secondsRemaining: 0,
+        secondsWaiting: 0,
+        clearAlertSnapshot: true,
         selectedTaskId: _resolveInitialTaskId(
           requestedTaskId: null,
           openTasks: state.openTasks,

@@ -12,6 +12,8 @@ import '../../../../shared/widgets/app_member_avatar.dart';
 import '../../../../shared/widgets/app_scroll_fade.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../services/image_upload_service.dart';
+import '../../../invites/domain/entities/invite_channel.dart';
+import '../../../invites/presentation/widgets/member_access_options.dart';
 import '../../data/models/network_member_model.dart';
 import '../bloc/network_bloc.dart';
 import 'access_level_selector.dart';
@@ -76,7 +78,22 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
   /// Erro exibido quando o "Acesso Parcial" é salvo sem nenhuma permissão.
   String? _permissionError;
 
+  /// Prazo do acesso compartilhado (`null` = ilimitado; `0` = prazo livre
+  /// inválido).
+  int? _durationHours;
+  String? _durationError;
+
+  /// Por onde chegam os alertas de SOS e de tarefa.
+  AlertDelivery _alertDelivery = AlertDelivery.both;
+
+  /// Canal do convite enviado ao salvar (`null` = não enviar).
+  InviteChannel? _inviteChannel = InviteChannel.app;
+
   bool get _isEditing => widget.member != null;
+
+  bool get _usesWhatsApp =>
+      _alertDelivery.channels.contains(AlertChannel.whatsapp) ||
+      _inviteChannel == InviteChannel.whatsapp;
 
   @override
   void initState() {
@@ -91,6 +108,10 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
     _role = member.role;
     _accessLevel = member.accessLevel;
     _permissions.addAll(member.permissions);
+    _durationHours = member.accessDurationHours;
+    _alertDelivery = AlertDelivery.fromChannels(member.alertChannels);
+    // Editar não reenvia convite, a não ser que a dona escolha.
+    _inviteChannel = null;
   }
 
   /// Troca o nível selecionado. Sair do "Acesso Parcial" limpa as permissões,
@@ -240,7 +261,134 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
         _permissions.clear();
         _permissionError = null;
       }
+      // "Apenas Visualização" não inclui WhatsApp: o convite vai pelo app.
+      if (level == AccessLevel.readonly &&
+          _inviteChannel == InviteChannel.whatsapp) {
+        _inviteChannel = InviteChannel.app;
+      }
     });
+  }
+
+  /// Pede confirmação antes de uma ação com consequência imediata.
+  Future<void> _confirmAccessAction({
+    required String title,
+    required String message,
+    required String confirmLabel,
+    required NetworkEvent event,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          title,
+          style: AppTypography.titleLarge.copyWith(
+            color: AppColors.textPrimary,
+          ),
+        ),
+        content: Text(
+          message,
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Voltar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              confirmLabel,
+              style: AppTypography.labelLarge.copyWith(color: AppColors.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      context.read<NetworkBloc>().add(event);
+      Navigator.of(context).pop();
+    }
+  }
+
+  /// Situação do acesso e as ações de remover/cancelar (só na edição).
+  Widget _buildAccessStatus(NetworkMemberModel member) {
+    final status = member.effectiveInviteStatus();
+    final expiresAt = member.accessExpiresAt;
+    final detail = switch (status) {
+      MemberInviteStatus.active when expiresAt != null =>
+        'Acesso ativo até ${_formatDate(expiresAt)}.',
+      MemberInviteStatus.active => 'Acesso ativo, sem prazo de término.',
+      MemberInviteStatus.pending => 'Convite enviado, aguardando o aceite.',
+      MemberInviteStatus.expired => 'O prazo de acesso terminou.',
+      MemberInviteStatus.revoked => 'O acesso foi removido.',
+      MemberInviteStatus.none => 'Ainda não recebeu convite.',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Situação do acesso',
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          '${status.label}. $detail',
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        if (status == MemberInviteStatus.active) ...[
+          const SizedBox(height: AppSpacing.sm),
+          AppButton(
+            label: 'Remover acesso',
+            icon: Icons.person_remove_outlined,
+            variant: AppButtonVariant.destructive,
+            onPressed: () => _confirmAccessAction(
+              title: 'Remover acesso?',
+              message:
+                  '${member.name} deixa de ver este perfil no app e no '
+                  'WhatsApp agora mesmo. Você pode convidar de novo depois.',
+              confirmLabel: 'Remover',
+              event: NetworkRevokeAccessEvent(memberId: member.id),
+            ),
+          ),
+        ],
+        if (status == MemberInviteStatus.pending) ...[
+          const SizedBox(height: AppSpacing.sm),
+          AppButton(
+            label: 'Cancelar convite',
+            icon: Icons.cancel_outlined,
+            variant: AppButtonVariant.secondary,
+            onPressed: () => _confirmAccessAction(
+              title: 'Cancelar convite?',
+              message: 'O código enviado deixa de funcionar.',
+              confirmLabel: 'Cancelar convite',
+              event: NetworkCancelInviteEvent(memberId: member.id),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  static String _formatDate(DateTime date) {
+    String two(int value) => value.toString().padLeft(2, '0');
+    return '${two(date.day)}/${two(date.month)} às '
+        '${two(date.hour)}:${two(date.minute)}';
+  }
+
+  /// WhatsApp precisa de DDD + número (com ou sem o 55 do Brasil).
+  static bool _isWhatsAppPhone(String value) {
+    final digits = value.replaceAll(RegExp(r'\D'), '');
+    if (digits.length == 10 || digits.length == 11) return true;
+    return (digits.length == 12 || digits.length == 13) &&
+        digits.startsWith('55');
   }
 
   void _onPermissionToggled(NetworkPermission permission) {
@@ -263,14 +411,18 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
     // "Acesso Parcial" sem nenhuma permissão marcada não dá acesso a nada.
     final isMissingPermissions =
         _accessLevel == AccessLevel.partial && _permissions.isEmpty;
+    final isInvalidDuration = _durationHours != null && _durationHours! <= 0;
     setState(() {
       _permissionError = isMissingPermissions
           ? 'Selecione ao menos uma permissão.'
           : null;
+      _durationError = isInvalidDuration
+          ? 'Informe um número de horas maior que zero.'
+          : null;
     });
 
     final isFormValid = _formKey.currentState!.validate();
-    if (!isFormValid || isMissingPermissions) return;
+    if (!isFormValid || isMissingPermissions || isInvalidDuration) return;
 
     final relationship = _relationshipController.text.trim();
     final email = _emailController.text.trim();
@@ -290,6 +442,9 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
           imageFile: _selectedImage,
           removePhoto: _removePhoto,
           careRecipientId: widget.careRecipientId,
+          accessDurationHours: _durationHours,
+          alertChannels: _alertDelivery.channels,
+          inviteChannel: _inviteChannel,
         ),
       );
       return;
@@ -306,6 +461,9 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
         permissions: _permissions.toList(),
         imageFile: _selectedImage,
         careRecipientId: widget.careRecipientId,
+        accessDurationHours: _durationHours,
+        alertChannels: _alertDelivery.channels,
+        inviteChannel: _inviteChannel,
       ),
     );
   }
@@ -412,6 +570,10 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
                             if (val == null || val.trim().isEmpty) {
                               return 'Informe o telefone.';
                             }
+                            if (_usesWhatsApp && !_isWhatsAppPhone(val)) {
+                              return 'Telefone inválido para WhatsApp. Use DDD '
+                                  '+ número, ex.: (11) 98765-4321.';
+                            }
                             return null;
                           },
                         ),
@@ -445,6 +607,30 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
                           onPermissionToggled: _onPermissionToggled,
                           errorText: _permissionError,
                         ),
+                        const SizedBox(height: AppSpacing.lg),
+                        MemberAccessOptions(
+                          durationHours: _durationHours,
+                          onDurationChanged: (hours) => setState(() {
+                            _durationHours = hours;
+                            _durationError = null;
+                          }),
+                          durationError: _durationError,
+                          alertDelivery: _alertDelivery,
+                          onAlertDeliveryChanged: (delivery) =>
+                              setState(() => _alertDelivery = delivery),
+                          inviteChannel: _inviteChannel,
+                          onInviteChannelChanged: (channel) =>
+                              setState(() => _inviteChannel = channel),
+                          isReadonly: _accessLevel == AccessLevel.readonly,
+                          allowNoInvite: _isEditing,
+                          showAppAlertNotice:
+                              widget.member?.effectiveInviteStatus() !=
+                              MemberInviteStatus.active,
+                        ),
+                        if (widget.member != null) ...[
+                          const SizedBox(height: AppSpacing.lg),
+                          _buildAccessStatus(widget.member!),
+                        ],
                         const SizedBox(height: AppSpacing.xl),
                         BlocBuilder<NetworkBloc, NetworkState>(
                           builder: (context, state) {

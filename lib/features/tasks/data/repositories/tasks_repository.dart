@@ -19,9 +19,10 @@ class TasksRepository {
   /// resultado ao perfil cuidado informado. Uma coleção vazia é um estado
   /// válido, não um motivo para criar tarefas de exemplo.
   ///
-  /// **Segurança:** Filtra SEMPRE pelo `caregiverId` do usuário logado para
-  /// garantir que um cuidador nunca veja tarefas de outro cuidador, mesmo que
-  /// ambos tenham perfis com o mesmo `careRecipientId`.
+  /// **Segurança:** quem decide o acesso são as regras do Firestore — a
+  /// dona ou quem tem concessão ativa para o assistido. Com perfil informado,
+  /// a busca é pelo perfil (assim um assistido compartilhado mostra as
+  /// tarefas de todos); sem perfil, só as tarefas da própria conta.
   Future<List<TaskModel>> fetchTasks({String? careRecipientId}) async {
     final user = _firebaseAuth.currentUser;
     if (user == null) {
@@ -31,13 +32,13 @@ class TasksRepository {
     }
 
     try {
-      Query<Map<String, dynamic>> query = _firestore
-          .collection('tasks')
-          .where('caregiverId', isEqualTo: user.uid);
-
-      if (careRecipientId != null && careRecipientId.isNotEmpty) {
-        query = query.where('careRecipientId', isEqualTo: careRecipientId);
-      }
+      final query = careRecipientId != null && careRecipientId.isNotEmpty
+          ? _firestore
+                .collection('tasks')
+                .where('careRecipientId', isEqualTo: careRecipientId)
+          : _firestore
+                .collection('tasks')
+                .where('caregiverId', isEqualTo: user.uid);
 
       final snapshot = await query.get();
       return snapshot.docs
@@ -57,9 +58,10 @@ class TasksRepository {
 
   /// Adds a new task to the Firestore repository.
   ///
-  /// **Segurança:** Sempre define `caregiverId` como o UID do usuário logado,
-  /// ignorando qualquer valor passado no modelo (proteção contra tentativa de
-  /// criar tarefa para outro cuidador).
+  /// **Segurança:** ignora o `caregiverId` do modelo. A tarefa pertence
+  /// sempre à dona do assistido (lida do próprio assistido), e `createdBy`
+  /// guarda quem criou — assim uma pessoa convidada cria tarefas no perfil
+  /// compartilhado. As regras do Firestore conferem as duas coisas.
   Future<TaskModel> addTask(TaskModel task) async {
     final user = _firebaseAuth.currentUser;
     if (user == null) {
@@ -71,15 +73,38 @@ class TasksRepository {
     final docId = task.id.isEmpty
         ? 'task_${DateTime.now().millisecondsSinceEpoch}'
         : task.id;
-    
-    // Garante que a tarefa pertence ao cuidador logado
-    final finalTask = task.copyWith(
-      id: docId,
-      caregiverId: user.uid,
-    );
 
-    await _firestore.collection('tasks').doc(docId).set(finalTask.toJson());
-    return finalTask;
+    try {
+      final finalTask = task.copyWith(
+        id: docId,
+        caregiverId: await _ownerOf(task.careRecipientId, fallback: user.uid),
+      );
+      await _firestore.collection('tasks').doc(docId).set({
+        ...finalTask.toJson(),
+        'createdBy': user.uid,
+      });
+      return finalTask;
+    } on FirebaseException catch (error) {
+      throw AppException(
+        error.code == 'permission-denied'
+            ? 'Seu acesso a este perfil não permite criar tarefas.'
+            : 'Não foi possível salvar a tarefa. Tente novamente.',
+        code: error.code,
+      );
+    }
+  }
+
+  /// Dona do assistido; [fallback] quando o perfil não pôde ser lido.
+  Future<String> _ownerOf(
+    String careRecipientId, {
+    required String fallback,
+  }) async {
+    if (careRecipientId.isEmpty) return fallback;
+    final recipient = await _firestore
+        .collection('care_recipients')
+        .doc(careRecipientId)
+        .get();
+    return (recipient.data()?['caregiverId'] as String?) ?? fallback;
   }
 
   /// Toggles task completion status with optional completion note.

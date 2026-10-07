@@ -21,7 +21,12 @@ class ChatState extends Equatable {
     this.selectedProfileName,
     this.selectedCategoryId,
     this.sortOption = ChatSortOption.recent,
+    this.canUseChat = true,
   });
+
+  /// `false` quando o perfil foi compartilhado sem permissão de chat
+  /// ("Apenas Visualização" ou Parcial sem chat): só leitura.
+  final bool canUseChat;
 
   final ChatStatus status;
   final List<ChatRoomModel> rooms;
@@ -131,8 +136,10 @@ class ChatState extends Equatable {
     String? selectedCategoryId,
     bool clearSelectedCategory = false,
     ChatSortOption? sortOption,
+    bool? canUseChat,
   }) {
     return ChatState(
+      canUseChat: canUseChat ?? this.canUseChat,
       status: status ?? this.status,
       rooms: rooms ?? this.rooms,
       profiles: profiles ?? this.profiles,
@@ -172,5 +179,6 @@ class ChatState extends Equatable {
     selectedProfileName,
     selectedCategoryId,
     sortOption,
+    canUseChat,
   ];
 }

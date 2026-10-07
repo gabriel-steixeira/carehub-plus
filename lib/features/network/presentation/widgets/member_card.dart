@@ -82,6 +82,9 @@ class MemberCard extends StatelessWidget {
 
                 // Badge de acesso
                 _AccessBadge(accessLevel: member.accessLevel),
+
+                // Situação do convite/acesso compartilhado
+                _InviteStatusText(member: member),
               ],
             ),
           ),
@@ -206,6 +209,42 @@ class _AccessBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Situação do convite (pendente, ativo até, expirado, removido).
+class _InviteStatusText extends StatelessWidget {
+  const _InviteStatusText({required this.member});
+
+  final NetworkMemberModel member;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = member.effectiveInviteStatus();
+    if (status == MemberInviteStatus.none) return const SizedBox.shrink();
+
+    final expiresAt = member.accessExpiresAt;
+    String two(int value) => value.toString().padLeft(2, '0');
+    final text = status == MemberInviteStatus.active && expiresAt != null
+        ? 'Acesso até ${two(expiresAt.day)}/${two(expiresAt.month)} às '
+              '${two(expiresAt.hour)}:${two(expiresAt.minute)}'
+        : status.label;
+    final color = switch (status) {
+      MemberInviteStatus.active => AppColors.success,
+      MemberInviteStatus.pending => AppColors.info,
+      _ => AppColors.textSecondary,
+    };
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.xs),
+      child: Text(
+        text,
+        style: AppTypography.labelSmall.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

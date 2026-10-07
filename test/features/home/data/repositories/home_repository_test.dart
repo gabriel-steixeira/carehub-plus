@@ -45,6 +45,7 @@ void main() {
     when(() => mockCollectionReference.doc(any())).thenReturn(mockDocumentReference);
     when(() => mockDocumentReference.get()).thenAnswer((_) async => mockDocumentSnapshot);
     when(() => mockCollectionReference.where(any(), isEqualTo: any(named: 'isEqualTo'))).thenReturn(mockQuery);
+    when(() => mockCollectionReference.where(any(), arrayContains: any(named: 'arrayContains'))).thenReturn(mockQuery);
     when(() => mockQuery.get()).thenAnswer((_) async => mockQuerySnapshot);
     when(() => mockQuerySnapshot.docs).thenReturn([]);
 

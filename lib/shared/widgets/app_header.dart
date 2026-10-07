@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../features/profile/data/repositories/caregiver_profile_repository.dart';
+import 'app_notification_bell.dart';
 
 /// Standard top header bar for main app screens (Home, Dashboard, etc.).
 class AppHeader extends StatefulWidget {
@@ -19,6 +20,7 @@ class AppHeader extends StatefulWidget {
     this.onSettingsPressed,
     this.showProfile = true,
     this.showSettings = true,
+    this.showNotifications = true,
     this.leading,
   });
 
@@ -36,6 +38,10 @@ class AppHeader extends StatefulWidget {
 
   /// Whether the settings button is visible.
   final bool showSettings;
+
+  /// Whether the notification bell is visible. The bell also hides itself
+  /// when nobody is signed in, so login and sign-up screens stay unchanged.
+  final bool showNotifications;
 
   /// Optional leading widget (e.g. a back button) shown before the avatar.
   ///
@@ -78,9 +84,9 @@ class _AppHeaderState extends State<AppHeader> {
 
     try {
       final snapshot = await CaregiverProfileRepository().fetchProfileWithPlan();
-      return _CaregiverPhoto(
-        photoUrl: _normalize(widget.photoUrl ?? snapshot.profile.photoUrl),
-        photoBase64: _normalize(snapshot.profile.photoBase64),
+      return _CaregiverPhoto.from(
+        photoUrl: snapshot.profile.photoUrl,
+        photoBase64: snapshot.profile.photoBase64,
       );
     } catch (_) {
       // A falha ao carregar o avatar não deve impedir o uso da tela.
@@ -89,15 +95,10 @@ class _AppHeaderState extends State<AppHeader> {
   }
 
   _CaregiverPhoto _photoFromWidget() {
-    return _CaregiverPhoto(
-      photoUrl: _normalize(widget.photoUrl),
-      photoBase64: _normalize(widget.photoBase64),
+    return _CaregiverPhoto.from(
+      photoUrl: widget.photoUrl,
+      photoBase64: widget.photoBase64,
     );
-  }
-
-  static String? _normalize(String? value) {
-    if (value == null || value.isEmpty) return null;
-    return value;
   }
 
   static Uint8List? _decodeBase64(String? value) {
@@ -179,20 +180,26 @@ class _AppHeaderState extends State<AppHeader> {
             ],
           ),
 
-          if (widget.showSettings)
-            // Right side: Settings gear
-            IconButton(
-              icon: const Icon(
-                Icons.settings_outlined,
-                color: AppColors.textSecondary,
-                size: 24,
-              ),
-              onPressed:
-                  widget.onSettingsPressed ??
-                  () {
-                    context.push(AppRoutes.settings);
-                  },
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.showNotifications) const AppNotificationBell(),
+              if (widget.showSettings)
+                // Right side: Settings gear
+                IconButton(
+                  icon: const Icon(
+                    Icons.settings_outlined,
+                    color: AppColors.textSecondary,
+                    size: 24,
+                  ),
+                  onPressed:
+                      widget.onSettingsPressed ??
+                      () {
+                        context.push(AppRoutes.settings);
+                      },
+                ),
+            ],
+          ),
         ],
       ),
     );
@@ -217,6 +224,28 @@ class _AppHeaderState extends State<AppHeader> {
 
 class _CaregiverPhoto {
   const _CaregiverPhoto({this.photoUrl, this.photoBase64});
+
+  /// Normaliza os dados recebidos: texto vazio vira `null` e um `photoUrl`
+  /// que não é endereço `http(s)` é tratado como base64. Algumas telas
+  /// recebem a foto pelo antigo `fetchPhotoUrl()`, que devolve o base64 nesse
+  /// campo — passado ao `NetworkImage`, ele falharia e o avatar ficaria vazio.
+  factory _CaregiverPhoto.from({String? photoUrl, String? photoBase64}) {
+    final url = _normalize(photoUrl);
+    final base64 = _normalize(photoBase64);
+    final isRemote =
+        url != null &&
+        (url.startsWith('http://') || url.startsWith('https://'));
+
+    return _CaregiverPhoto(
+      photoUrl: isRemote ? url : null,
+      photoBase64: base64 ?? (isRemote ? null : url),
+    );
+  }
+
+  static String? _normalize(String? value) {
+    if (value == null || value.isEmpty) return null;
+    return value;
+  }
 
   final String? photoUrl;
   final String? photoBase64;

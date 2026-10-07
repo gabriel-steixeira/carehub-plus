@@ -1,0 +1,29 @@
+{
+  "name": "carehub-plus-functions",
+  "description": "CareHub Plus — Cloud Functions (integração WhatsApp Cloud API)",
+  "private": true,
+  "main": "lib/index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log",
+    "test:rules": "tsc -p tsconfig.test.json && firebase emulators:exec --only firestore --project demo-carehub \"node --test lib-test/test/rules/*.test.js\"",
+    "test:unit": "tsc -p tsconfig.test.json && firebase emulators:exec --only firestore --project demo-carehub \"node --test --test-concurrency=1 lib-test/test/unit/*.test.js\"",
+    "test": "tsc -p tsconfig.test.json && firebase emulators:exec --only firestore --project demo-carehub \"node --test --test-concurrency=1 lib-test/test/rules/*.test.js lib-test/test/unit/*.test.js\""
+  },
+  "dependencies": {
+    "firebase-admin": "14.5.0",
+    "firebase-functions": "7.4.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "@types/node": "22.20.4",
+    "firebase": "12.19.0",
+    "typescript": "5.9.3"
+  }
+}

@@ -11,7 +11,9 @@ import '../../features/cora/presentation/pages/cora_chat_page.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/toke/presentation/pages/toke_chat_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/invites/presentation/pages/redeem_invite_page.dart';
 import '../../features/network/presentation/pages/network_page.dart';
+import '../../features/notifications/presentation/pages/notification_inbox_page.dart';
 import '../../features/notifications/presentation/pages/notifications_page.dart';
 import '../../features/profile/presentation/pages/edit_profile_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
@@ -41,9 +43,11 @@ class AppRoutes {
   static const String sos = '/sos';
   static const String settings = '/settings';
   static const String notifications = '/notifications';
+  static const String notificationInbox = '/notifications/inbox';
   static const String editProfile = '/profile/edit';
   static const String subscriptions = '/subscriptions';
   static const String about = '/about';
+  static const String redeemInvite = '/invites/redeem';
 }
 
 /// GoRouter configuration — single source of truth for navigation.
@@ -137,6 +141,10 @@ class AppRouter {
         builder: (context, state) => const NotificationsPage(),
       ),
       GoRoute(
+        path: AppRoutes.notificationInbox,
+        builder: (context, state) => const NotificationInboxPage(),
+      ),
+      GoRoute(
         path: AppRoutes.editProfile,
         builder: (context, state) => const EditProfilePage(),
       ),
@@ -147,6 +155,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.about,
         builder: (context, state) => const AboutPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.redeemInvite,
+        builder: (context, state) => const RedeemInvitePage(),
       ),
     ],
   );

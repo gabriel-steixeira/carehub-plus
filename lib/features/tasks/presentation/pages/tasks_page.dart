@@ -227,11 +227,14 @@ class _TasksContent extends StatelessWidget {
             TasksHeaderSection(
               pendingCount: state.pendingCount,
               completedCount: state.completedCount,
-              onCreateTask: () => CreateTaskBottomSheet.show(
-                context,
-                careRecipientId:
-                    state.careRecipientId ?? state.selectedProfileId,
-              ),
+              // Acesso só de visualização: sem botão de criar.
+              onCreateTask: state.canEditTasks
+                  ? () => CreateTaskBottomSheet.show(
+                      context,
+                      careRecipientId:
+                          state.careRecipientId ?? state.selectedProfileId,
+                    )
+                  : null,
             ),
             const SizedBox(height: AppSpacing.md),
           ],
@@ -292,9 +295,25 @@ class _TasksContent extends StatelessWidget {
                     final taskCard = TaskCard(
                       task: task,
                       category: category,
-                      onToggleCompletion: () => context.read<TasksBloc>().add(
-                        TaskToggleCompletionEvent(taskId: task.id),
-                      ),
+                      // Cada tarefa segue o acesso do perfil a que pertence
+                      // (vale também na visão "Todos os perfis").
+                      onToggleCompletion:
+                          state.canEditTasksOf(task.careRecipientId)
+                          ? () => context.read<TasksBloc>().add(
+                              TaskToggleCompletionEvent(taskId: task.id),
+                            )
+                          : () => ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Seu acesso a este perfil é só de '
+                                  'visualização.',
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    color: AppColors.textInverse,
+                                  ),
+                                ),
+                                backgroundColor: AppColors.primaryDark,
+                              ),
+                            ),
                       onTapDetail: () =>
                           TaskDetailModal.show(context, task, category),
                       onRequestSos: isSosSelectionMode

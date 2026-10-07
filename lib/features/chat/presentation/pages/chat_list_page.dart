@@ -203,7 +203,8 @@ class _ChatContent extends StatelessWidget {
                 ),
               ),
               _NewTopicButton(
-                onPressed: state.careRecipientId == null
+                // Sem perfil ou sem permissão de chat: botão desabilitado.
+                onPressed: state.careRecipientId == null || !state.canUseChat
                     ? null
                     : () => CreateChatRoomBottomSheet.show(
                         context,

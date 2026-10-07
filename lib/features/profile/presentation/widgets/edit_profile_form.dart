@@ -28,6 +28,7 @@ import '../../domain/entities/caregiver_profile_entity.dart';
 import '../../../subscriptions/domain/entities/contracted_subscription_entity.dart';
 import '../../../subscriptions/domain/entities/subscription_plan_entity.dart';
 import '../bloc/edit_profile_bloc.dart';
+import 'cora_whatsapp_card.dart';
 import 'data_privacy_card.dart';
 import 'family_plan_card.dart';
 import 'profile_birth_date_field.dart';
@@ -278,6 +279,9 @@ class _EditProfileFormState extends State<EditProfileForm> {
           const SizedBox(height: AppSpacing.lg),
 
           DataPrivacyCard(onTap: widget.onPrivacyTap),
+          const SizedBox(height: AppSpacing.md),
+
+          const CoraWhatsAppCard(),
           const SizedBox(height: AppSpacing.md),
 
           FamilyPlanCard(

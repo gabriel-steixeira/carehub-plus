@@ -34,6 +34,7 @@ import '../models/sos_request_args.dart';
 import '../widgets/sos_accepted_view.dart';
 import '../widgets/sos_alerting_view.dart';
 import '../widgets/sos_compose_view.dart';
+import '../widgets/sos_waiting_view.dart';
 
 /// Tela de SOS / pedido de ajuda à rede de apoio.
 class SosPage extends StatelessWidget {
@@ -175,6 +176,7 @@ class _SosPhaseView extends StatelessWidget {
     final phaseContent = switch (state.phase) {
       SosPhase.composing => SosComposeView(state: state),
       SosPhase.alerting => SosAlertingView(state: state),
+      SosPhase.waiting => SosWaitingView(state: state),
       SosPhase.accepted => SosAcceptedView(state: state),
     };
 

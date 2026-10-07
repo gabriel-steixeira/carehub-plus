@@ -74,15 +74,20 @@ class _SocialButton extends StatelessWidget {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             icon,
             const SizedBox(width: AppSpacing.sm),
-            Text(
-              label,
-              style: AppTypography.labelLarge.copyWith(
-                color: textColor,
-                fontSize: 14,
-                letterSpacing: 0.5,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.labelLarge.copyWith(
+                  color: textColor,
+                  fontSize: 14,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
           ],
