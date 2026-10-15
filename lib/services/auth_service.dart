@@ -94,6 +94,87 @@ class AuthService {
     }
   }
 
+  /// Exposes the provider ids of the current user (e.g. 'password',
+  /// 'google.com', 'facebook.com') so the UI can pick the reauth flow.
+  List<String> get currentProviderIds =>
+      currentUser?.providerData.map((p) => p.providerId).toList() ?? const [];
+
+  /// Reauthenticates the current user with email and password.
+  ///
+  /// Used before sensitive operations such as account deletion.
+  Future<void> reauthenticateWithPassword(String password) async {
+    final user = currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'Nenhum usuário autenticado para reautenticar.',
+      );
+    }
+
+    final credential = EmailAuthProvider.credential(
+      email: user.email!,
+      password: password,
+    );
+    await user.reauthenticateWithCredential(credential);
+  }
+
+  /// Reauthenticates the current user using Google OAuth.
+  Future<void> reauthenticateWithGoogle() async {
+    final user = currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'Nenhum usuário autenticado para reautenticar.',
+      );
+    }
+
+    final googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) {
+      throw FirebaseAuthException(
+        code: 'ERROR_ABORTED_BY_USER',
+        message: 'Login com Google cancelado pelo usuário.',
+      );
+    }
+
+    final googleAuth = await googleUser.authentication;
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+
+    await user.reauthenticateWithCredential(credential);
+  }
+
+  /// Reauthenticates the current user using Facebook OAuth.
+  Future<void> reauthenticateWithFacebook() async {
+    final user = currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'Nenhum usuário autenticado para reautenticar.',
+      );
+    }
+
+    final result = await _facebookAuth.login();
+
+    if (result.status == LoginStatus.success) {
+      final credential = FacebookAuthProvider.credential(
+        result.accessToken!.token,
+      );
+      await user.reauthenticateWithCredential(credential);
+    } else if (result.status == LoginStatus.cancelled) {
+      throw FirebaseAuthException(
+        code: 'ERROR_ABORTED_BY_USER',
+        message: 'Login com Facebook cancelado pelo usuário.',
+      );
+    } else {
+      throw FirebaseAuthException(
+        code: 'ERROR_FACEBOOK_LOGIN_FAILED',
+        message: result.message ?? 'Falha ao autenticar com o Facebook.',
+      );
+    }
+  }
+
   /// Sends a password reset email.
   Future<void> sendPasswordResetEmail(String email) async {
     await _firebaseAuth.sendPasswordResetEmail(email: email);
