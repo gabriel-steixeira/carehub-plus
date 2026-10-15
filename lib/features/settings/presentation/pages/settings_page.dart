@@ -9,12 +9,15 @@ import '../../../../app/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../services/auth_service.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../data/repositories/settings_repository.dart';
 import '../bloc/settings_bloc.dart';
+import '../widgets/delete_account_reauth_sheet.dart';
+import '../widgets/delete_account_warning_sheet.dart';
 
 /// Caregiver Profile & Settings Page.
 class SettingsPage extends StatelessWidget {
@@ -54,6 +57,59 @@ class SettingsView extends StatelessWidget {
     }
   }
 
+  /// Reage ao fluxo de exclusão de conta (resolver -> aviso -> reautenticar).
+  Future<void> _onDeletionStateChanged(
+    BuildContext context,
+    SettingsState state,
+  ) async {
+    switch (state.deletionStatus) {
+      case SettingsDeletionStatus.ready:
+        final preview = state.deletionPreview;
+        if (preview == null) return;
+
+        final bloc = context.read<SettingsBloc>();
+        final wantsToContinue = await DeleteAccountWarningSheet.show(
+          context,
+          preview: preview,
+        );
+        if (!context.mounted || !wantsToContinue) return;
+
+        final reauthenticated = await DeleteAccountReauthSheet.show(context);
+        if (!context.mounted || !reauthenticated) return;
+
+        bloc.add(const SettingsDeleteAccountEvent());
+        break;
+
+      case SettingsDeletionStatus.deleted:
+        await AuthService().signOut();
+        if (!context.mounted) return;
+        context.go(AppRoutes.login);
+        break;
+
+      case SettingsDeletionStatus.failure:
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                state.deletionError ??
+                    'Não foi possível excluir a conta agora. Tente novamente.',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textInverse,
+                ),
+              ),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        break;
+
+      case SettingsDeletionStatus.idle:
+      case SettingsDeletionStatus.resolving:
+      case SettingsDeletionStatus.deleting:
+        break;
+    }
+  }
+
   void _showComingSoon(BuildContext context, String label) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -74,8 +130,12 @@ class SettingsView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background, // Header area background
-      body: BlocBuilder<SettingsBloc, SettingsState>(
-        builder: (context, state) {
+      body: BlocListener<SettingsBloc, SettingsState>(
+        listenWhen: (previous, current) =>
+            previous.deletionStatus != current.deletionStatus,
+        listener: _onDeletionStateChanged,
+        child: BlocBuilder<SettingsBloc, SettingsState>(
+          builder: (context, state) {
           if (state.status == SettingsStatus.loading) {
             return const AppLoading();
           }
@@ -184,6 +244,33 @@ class SettingsView extends StatelessWidget {
                               ),
                             ),
                           ),
+
+                          // Delete account action (destructive).
+                          Center(
+                            child: TextButton.icon(
+                              onPressed:
+                                  state.deletionStatus ==
+                                          SettingsDeletionStatus.resolving ||
+                                      state.deletionStatus ==
+                                          SettingsDeletionStatus.deleting
+                                  ? null
+                                  : () => context.read<SettingsBloc>().add(
+                                      const SettingsResolveDeletionEvent(),
+                                    ),
+                              icon: const Icon(
+                                Icons.delete_forever_rounded,
+                                color: AppColors.error,
+                                size: 20,
+                              ),
+                              label: Text(
+                                'Excluir conta',
+                                style: AppTypography.labelLarge.copyWith(
+                                  color: AppColors.error,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
                           const SizedBox(height: AppSpacing.lg),
                         ],
                       ),
@@ -193,7 +280,8 @@ class SettingsView extends StatelessWidget {
               ),
             ],
           );
-        },
+          },
+        ),
       ),
       bottomNavigationBar: AppBottomNavigation(
         // Settings is opened from the header gear, so no tab is highlighted.

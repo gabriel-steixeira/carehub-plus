@@ -23,3 +23,13 @@ class SettingsToggleNotificationEvent extends SettingsEvent {
   @override
   List<Object?> get props => [key, value];
 }
+
+/// Resolve o caso de exclusão (quem é afetado) antes de abrir o fluxo.
+class SettingsResolveDeletionEvent extends SettingsEvent {
+  const SettingsResolveDeletionEvent();
+}
+
+/// Confirma a exclusão da conta após a reautenticação.
+class SettingsDeleteAccountEvent extends SettingsEvent {
+  const SettingsDeleteAccountEvent();
+}
