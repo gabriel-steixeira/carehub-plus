@@ -26,6 +26,13 @@ void main() async {
   PushNotificationService().start(
     onNotificationOpened: () =>
         AppRouter.router.push(AppRoutes.notificationInbox),
+    onNotificationData: (type, relatedId) {
+      if (type == 'sos') {
+        AppRouter.router.push(AppRoutes.sosDetail, extra: relatedId);
+      } else {
+        AppRouter.router.push(AppRoutes.notificationInbox);
+      }
+    },
   );
 
   // Lock orientation to portrait

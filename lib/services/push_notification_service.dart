@@ -47,7 +47,15 @@ class PushNotificationService {
   String? _lastUid;
 
   /// Começa a acompanhar a conta logada. Chamar uma vez, na abertura do app.
-  void start({void Function()? onNotificationOpened}) {
+  ///
+  /// [onNotificationData] recebe o `type`/`relatedId` do push quando ambos
+  /// vierem preenchidos, permitindo abrir a tela certa (ex.: o detalhe do
+  /// SOS). Sem esses dados, cai no [onNotificationOpened] (comportamento
+  /// antigo).
+  void start({
+    void Function()? onNotificationOpened,
+    void Function(String type, String relatedId)? onNotificationData,
+  }) {
     // Push só no Android por enquanto (iOS exige chave APNs).
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
 
@@ -60,11 +68,54 @@ class PushNotificationService {
       if (uid != null) unawaited(_saveToken(token, uid));
     });
 
-    if (onNotificationOpened != null) {
+    if (onNotificationOpened != null || onNotificationData != null) {
       // Toque na notificação com o app em segundo plano.
       FirebaseMessaging.onMessageOpenedApp.listen(
-        (_) => onNotificationOpened(),
+        (message) => _route(message, onNotificationOpened, onNotificationData),
       );
+
+      // App encerrado: a mensagem que o abriu chega por aqui.
+      unawaited(_handleInitialMessage(onNotificationOpened, onNotificationData));
+    }
+  }
+
+  /// Trata o push que abriu o app quando ele estava encerrado.
+  Future<void> _handleInitialMessage(
+    void Function()? onNotificationOpened,
+    void Function(String type, String relatedId)? onNotificationData,
+  ) async {
+    try {
+      final initial = await _messaging.getInitialMessage();
+      if (initial != null) {
+        _route(initial, onNotificationOpened, onNotificationData);
+      }
+    } catch (error) {
+      // Push é complemento: falhar aqui não pode travar o app.
+      debugPrint('PushNotificationService: $error');
+    }
+  }
+
+  /// Decide para onde levar a pessoa a partir dos dados do push.
+  void _route(
+    RemoteMessage message,
+    void Function()? onNotificationOpened,
+    void Function(String type, String relatedId)? onNotificationData,
+  ) {
+    try {
+      final type = message.data['type'] as String?;
+      final relatedId = message.data['relatedId'] as String?;
+      if (onNotificationData != null &&
+          type != null &&
+          type.isNotEmpty &&
+          relatedId != null &&
+          relatedId.isNotEmpty) {
+        onNotificationData(type, relatedId);
+        return;
+      }
+      onNotificationOpened?.call();
+    } catch (error) {
+      // Push é complemento: falhar aqui não pode travar o app.
+      debugPrint('PushNotificationService: $error');
     }
   }
 

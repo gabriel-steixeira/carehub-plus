@@ -28,6 +28,7 @@ import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_page_frame.dart';
 import '../../../../shared/widgets/app_responsive_body.dart';
+import '../../domain/entities/app_notification_entity.dart';
 import '../bloc/notification_inbox_bloc.dart';
 import '../widgets/notification_inbox_tile.dart';
 
@@ -165,9 +166,15 @@ class NotificationInboxPage extends StatelessWidget {
                 NotificationInboxTile(
                   notification: item,
                   now: now,
-                  onTap: () => bloc.add(
-                    NotificationInboxMarkAsReadEvent(notificationId: item.id),
-                  ),
+                  onTap: () {
+                    bloc.add(
+                      NotificationInboxMarkAsReadEvent(notificationId: item.id),
+                    );
+                    if (item.type == AppNotificationType.sos &&
+                        item.relatedId != null) {
+                      context.push(AppRoutes.sosDetail, extra: item.relatedId);
+                    }
+                  },
                 ),
               const SizedBox(height: AppSpacing.xl),
             ],
