@@ -1,8 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
-import 'go_router_refresh_stream.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/about/presentation/pages/about_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -59,35 +56,8 @@ class AppRoutes {
 class AppRouter {
   AppRouter._();
 
-  /// Rotas acessíveis sem usuário autenticado.
-  ///
-  /// Qualquer outra rota exige login; sem sessão, o [_redirect] leva ao
-  /// `/login`. É o que garante a saída automática quando a conta é excluída.
-  static const Set<String> _publicRoutes = {
-    AppRoutes.splash,
-    AppRoutes.login,
-    AppRoutes.register,
-    AppRoutes.forgotPassword,
-    AppRoutes.redeemInvite,
-  };
-
-  /// Guarda de rota: expulsa para o login quem tenta abrir (ou fica em) uma
-  /// rota protegida sem estar autenticado. Reavaliado pelo [refreshListenable]
-  /// sempre que o estado de autenticação do Firebase muda.
-  static String? _redirect(BuildContext context, GoRouterState state) {
-    final isLoggedIn = FirebaseAuth.instance.currentUser != null;
-    final isPublic = _publicRoutes.contains(state.matchedLocation);
-
-    if (!isLoggedIn && !isPublic) return AppRoutes.login;
-    return null;
-  }
-
   static final GoRouter router = GoRouter(
     initialLocation: AppRoutes.splash,
-    redirect: _redirect,
-    refreshListenable: GoRouterRefreshStream(
-      FirebaseAuth.instance.authStateChanges(),
-    ),
     routes: [
       GoRoute(
         path: AppRoutes.splash,
