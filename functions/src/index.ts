@@ -37,3 +37,4 @@ export {
 } from "./callable/invites";
 export { coraChat, tokeInterpret } from "./callable/assistants";
 export { deleteAccount } from "./callable/account";
+export { acceptSosAlert } from "./callable/sos";
