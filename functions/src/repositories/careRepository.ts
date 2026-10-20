@@ -37,6 +37,20 @@ export function toAlertChannels(value: unknown): AlertChannel[] {
   return valid.length > 0 ? [...new Set(valid)] : ["whatsapp", "app"];
 }
 
+/** Canal único do dono: só "whatsapp" quando explícito; ausente/inválido = "app". */
+export function toAlertChannel(value: unknown): AlertChannel {
+  return value === "whatsapp" ? "whatsapp" : "app";
+}
+
+/** Contato e preferência de SOS do dono do perfil (caregivers/{uid}). */
+export interface OwnerContact {
+  uid: string;
+  name: string;
+  phone: string | null;
+  /** Canal preferido do dono para SOS (ausente/inválido => "app"). */
+  sosChannel: AlertChannel;
+}
+
 export function wantsAlertBy(member: MemberContact, channel: AlertChannel): boolean {
   return member.alertChannels.includes(channel);
 }
@@ -81,6 +95,19 @@ export class CareRepository {
     if (!caregiverId) return null;
     const snapshot = await db.collection("caregivers").doc(caregiverId).get();
     return (snapshot.get("name") as string | undefined) ?? null;
+  }
+
+  /** Lê contato e preferência de SOS do dono; `null` quando o doc não existe. */
+  async getOwnerContact(uid: string): Promise<OwnerContact | null> {
+    const snapshot = await db.collection("caregivers").doc(uid).get();
+    if (!snapshot.exists) return null;
+    const data = snapshot.data() ?? {};
+    return {
+      uid,
+      name: (data.name as string | undefined) ?? "",
+      phone: ((data.phone as string | undefined) ?? "").trim() || null,
+      sosChannel: toAlertChannel(data.sosAlertChannel),
+    };
   }
 
   /**

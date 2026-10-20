@@ -171,14 +171,19 @@ export class SosConversation {
       .map((doc) => doc.id)
       .slice(0, MAX_NOTIFIED);
 
+    // O dono é um destinatário especial quando quem pede não é o próprio dono.
+    const notifyOwner = access.role !== "owner";
     const recipient = firstName(access.careRecipientName);
-    if (notified.length === 0) {
+    if (notified.length === 0 && !notifyOwner) {
       input.session.draft = null;
       return {
         text: `Não encontrei ninguém na rede de apoio de ${recipient} para avisar. ${SAMU}`,
         quickReplies: [],
       };
     }
+
+    const ownerContact = notifyOwner ? await this.care.getOwnerContact(access.ownerId) : null;
+    const ownerChannel = ownerContact?.sosChannel ?? "app";
 
     const alertId = `sos_${this.now().getTime()}`;
     const now = localIsoNow(this.now());
@@ -190,6 +195,9 @@ export class SosConversation {
       taskId: null,
       taskTitle: reason,
       notifiedMemberIds: notified,
+      // O dono nunca entra em notifiedMemberIds; é avisado pelo trigger via
+      // notifyOwner/ownerChannel (app sempre; WhatsApp só quando escolhido).
+      ...(notifyOwner ? { notifyOwner: true, ownerChannel } : {}),
       // Direto em "dispatched": a confirmação no WhatsApp já fez o papel da
       // janela de cancelamento do app. O trigger atual faz o envio.
       status: "dispatched",
@@ -212,13 +220,25 @@ export class SosConversation {
       });
     }
 
-    logger.info("SOS aberto pela Cora no WhatsApp.", { alertId, notified: notified.length });
+    logger.info("SOS aberto pela Cora no WhatsApp.", { alertId, notified: notified.length, notifyOwner });
     return {
       text:
-        `Pronto, estou avisando ${notified.length} ${notified.length === 1 ? "pessoa" : "pessoas"} da rede de apoio de ${recipient}. ` +
+        `${this.dispatchSummary(notified.length, notifyOwner, recipient)} ` +
         `Para cancelar, mande CANCELAR. ${SAMU}`,
       quickReplies: [CANCEL],
     };
+  }
+
+  /**
+   * Texto de confirmação contando quantas pessoas serão avisadas. O dono do
+   * perfil (quando notifyOwner) conta como mais uma pessoa — avisada pelo app.
+   */
+  private dispatchSummary(notifiedCount: number, notifyOwner: boolean, recipient: string): string {
+    if (notifiedCount === 0 && notifyOwner) {
+      return `Pronto, avisei o responsável pelo perfil de ${recipient} pelo app.`;
+    }
+    const total = notifiedCount + (notifyOwner ? 1 : 0);
+    return `Pronto, estou avisando ${total} ${total === 1 ? "pessoa" : "pessoas"} da rede de apoio de ${recipient}.`;
   }
 
   /** Nome e membro de quem pediu: a dona ou o membro da concessão. */

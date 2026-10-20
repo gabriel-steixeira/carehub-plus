@@ -16,9 +16,10 @@ import * as logger from "firebase-functions/logger";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 
 import { REGION, whatsappToken } from "../config";
-import { CareRepository, wantsAlertBy } from "../repositories/careRepository";
+import { CareRepository, MemberContact, wantsAlertBy } from "../repositories/careRepository";
 import { MessageLogRepository } from "../repositories/messageLogRepository";
 import { AppNotifier } from "../notifications/appNotifier";
+import { toWhatsAppNumber } from "../shared/phone";
 import { firstName, templateParam } from "../shared/text";
 import { ButtonAction, buildPayload, SOS_ALERT_TEMPLATE } from "../whatsapp/templates";
 import { createMessenger } from "../whatsapp/whatsappMessenger";
@@ -41,7 +42,9 @@ export const onSosAlertDispatched = onDocumentWritten(
       0,
       MAX_MEMBERS_PER_ALERT,
     );
-    if (!caregiverId || memberIds.length === 0) return;
+    const notifyOwner = alert.notifyOwner === true;
+    // Segue quando há membros a avisar OU o dono é destinatário do alerta.
+    if (!caregiverId || (memberIds.length === 0 && !notifyOwner)) return;
 
     const log = new MessageLogRepository();
     if (!(await log.acquireDispatchLock(`sos_${alertId}`))) return;
@@ -59,13 +62,13 @@ export const onSosAlertDispatched = onDocumentWritten(
     // Pedido aberto por alguém da rede (app ou WhatsApp): o nome é de quem pediu.
     const requesterName = (alert.requestedByName as string | undefined) ?? caregiverName;
 
-    // Aberto pelo app por uma pessoa convidada: a dona fica sabendo. (Pelo
-    // WhatsApp, a própria conversa da Cora já avisa a dona.)
-    const requestedByUid = alert.requestedByUid as string | undefined;
-    if (requestedByUid && requestedByUid !== caregiverId && alert.channel !== "whatsapp") {
-      await new AppNotifier().notifyUid(caregiverId, {
+    // Aviso ao dono pelo app: SEMPRE que notifyOwner (padrão). Pelo WhatsApp,
+    // a própria conversa da Cora já criou esse aviso no app, então aqui só
+    // notificamos quando o alerta NÃO veio do WhatsApp — uma única notificação.
+    if (notifyOwner && alert.channel !== "whatsapp") {
+      await notifier.notifyUid(caregiverId, {
         type: "sos",
-        title: "SOS aberto por alguém da rede",
+        title: "Pedido de ajuda (SOS)",
         body: `${requesterName ? firstName(requesterName) : "Alguém da rede"} pediu ajuda para ${
           recipientName ?? "seu familiar"
         }: ${templateParam(alert.taskTitle as string | undefined)}.`,
@@ -131,6 +134,53 @@ export const onSosAlertDispatched = onDocumentWritten(
         sent++;
       } else {
         failed++;
+      }
+    }
+
+    // WhatsApp ao dono: só quando ele escolheu esse canal e tem número válido.
+    // O dono não está em notifiedMemberIds, então montamos um MemberContact
+    // sintético e reusamos o mesmo template/payloads dos membros.
+    if (notifyOwner && alert.ownerChannel === "whatsapp") {
+      const owner = await care.getOwnerContact(caregiverId);
+      if (owner && toWhatsAppNumber(owner.phone)) {
+        const ownerMember: MemberContact = {
+          id: `owner:${caregiverId}`,
+          name: owner.name,
+          phone: owner.phone ?? "",
+          email: null,
+          caregiverId,
+          careRecipientId,
+          alertChannels: ["whatsapp"],
+        };
+        const result = await messenger.sendTemplate(
+          ownerMember,
+          {
+            memberId: ownerMember.id,
+            memberName: ownerMember.name,
+            caregiverId,
+            careRecipientId,
+            relatedType: "sos",
+            relatedId: alertId,
+          },
+          {
+            name: SOS_ALERT_TEMPLATE,
+            bodyParams: [
+              templateParam(recipientName ?? "seu familiar"),
+              requesterName ? firstName(requesterName) : "A pessoa cuidadora",
+              templateParam(alert.taskTitle as string | undefined),
+            ],
+            quickReplyPayloads: [
+              buildPayload({ action: ButtonAction.sosAccept, targetId: alertId, memberId: ownerMember.id }),
+              buildPayload({ action: ButtonAction.sosDecline, targetId: alertId, memberId: ownerMember.id }),
+            ],
+          },
+          "sos",
+        );
+        if (result === "sent") {
+          sent++;
+        } else {
+          failed++;
+        }
       }
     }
 

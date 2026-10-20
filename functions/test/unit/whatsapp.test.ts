@@ -319,6 +319,51 @@ describe("SOS pela Cora", () => {
     assert.equal(alert.status, "cancelled");
   });
 
+  it("perfil só com a dona: cria o alerta avisando o responsável, sem 'não encontrei ninguém'", async () => {
+    const h = harness([], 0);
+    const SOLO = "5511944445555";
+    await db.collection("care_recipients").doc("r3").set({ id: "r3", name: "Belinha", caregiverId: OWNER });
+    // Único membro do perfil é quem está pedindo: a rede de members fica vazia.
+    await seedMember("solo_r3", "r3", SOLO);
+
+    await joinByWhatsApp(h, "solo_r3", SOLO);
+    await receive(h, SOLO, "SOS");
+    assert.match(h.messenger.last().text, /Vou avisar a rede de apoio de Belinha/);
+
+    await receive(h, SOLO, "Preciso comprar ração");
+    await receive(h, SOLO, "SIM");
+    assert.match(h.messenger.last().text, /avisei o responsável pelo perfil de Belinha pelo app/);
+    assert.doesNotMatch(h.messenger.last().text, /Não encontrei ninguém/);
+
+    const alerts = await db.collection("sos_alerts").get();
+    assert.equal(alerts.size, 1);
+    const alert = alerts.docs[0].data();
+    assert.deepEqual(alert.notifiedMemberIds, []);
+    assert.equal(alert.notifyOwner, true);
+    // Sem configuração do dono, o canal padrão é o app.
+    assert.equal(alert.ownerChannel, "app");
+  });
+
+  it("perfil só com a dona e canal WhatsApp configurado: ownerChannel vira 'whatsapp'", async () => {
+    const h = harness([], 0);
+    const SOLO = "5511944445555";
+    await db.collection("care_recipients").doc("r3").set({ id: "r3", name: "Belinha", caregiverId: OWNER });
+    await seedMember("solo_r3", "r3", SOLO);
+    await db.collection("caregivers").doc(OWNER).set(
+      { phone: OWNER_PHONE, sosAlertChannel: "whatsapp" },
+      { merge: true },
+    );
+
+    await joinByWhatsApp(h, "solo_r3", SOLO);
+    await receive(h, SOLO, "SOS");
+    await receive(h, SOLO, "Pular");
+    await receive(h, SOLO, "sim");
+
+    const alert = (await db.collection("sos_alerts").get()).docs[0].data();
+    assert.equal(alert.notifyOwner, true);
+    assert.equal(alert.ownerChannel, "whatsapp");
+  });
+
   it("Parcial sem SOS recebe recusa e ninguém é avisado", async () => {
     const h = harness();
     await db.collection("network_members").doc("bia_r1").update({ accessLevel: "partial", permissions: ["cora"] });
