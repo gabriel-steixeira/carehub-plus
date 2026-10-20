@@ -184,14 +184,11 @@ class SosRepository {
   /// real: só busca quem pediu, qual tarefa e a etapa atual do pedido.
   Future<SosAlertDetailEntity> fetchAlertDetail(String alertId) async {
     try {
-      final document = await _firestore
-          .collection(_alertsCollection)
-          .doc(alertId)
-          .get();
-      final data = document.data();
-      if (!document.exists || data == null) {
-        throw const AppException('Este pedido de ajuda não foi encontrado.');
-      }
+      // A leitura passa pelo backend (callable com Admin SDK): as regras do
+      // Firestore não deixam o membro acionado ler o alerta direto, só a dona
+      // ou quem abriu. A callable prova a participação do membro e devolve os
+      // campos do pedido.
+      final data = await _client.call('getSosAlertDetail', {'alertId': alertId});
 
       final status = switch (data['status']) {
         _statusPending => SosAlertStatus.pending,
@@ -234,10 +231,13 @@ class SosRepository {
             : null,
         notifiedMemberIds: notifiedMemberIds,
       );
-    } on FirebaseException catch (error) {
-      throw AppException(
+    } on AppException {
+      // O backend já devolve uma mensagem pronta (ex.: pedido não encontrado,
+      // sem permissão). Repassa sem reescrever.
+      rethrow;
+    } catch (_) {
+      throw const AppException(
         'Não foi possível abrir o pedido de ajuda. Tente novamente.',
-        code: error.code,
       );
     }
   }
@@ -248,6 +248,14 @@ class SosRepository {
   /// acontece no servidor.
   Future<void> acceptAlert(String alertId) async {
     await _client.call('acceptSosAlert', {'alertId': alertId});
+  }
+
+  /// A pessoa acionada recusa o pedido ("Não posso agora"). O backend
+  /// (callable com Admin SDK) resolve quem é o membro pelo login, registra a
+  /// recusa e avisa quem pediu no mesmo canal em que o pedido nasceu. O app
+  /// passa apenas o [alertId].
+  Future<void> declineAlert(String alertId) async {
+    await _client.call('declineSosAlert', {'alertId': alertId});
   }
 
   /// Converte o documento do Firestore no retrato de domínio. Campos ausentes

@@ -21,3 +21,8 @@ class SosDetailLoadRequested extends SosDetailEvent {
 class SosDetailAcceptRequested extends SosDetailEvent {
   const SosDetailAcceptRequested();
 }
+
+/// A pessoa acionada toca em "Não posso agora" e recusa o pedido.
+class SosDetailDeclineRequested extends SosDetailEvent {
+  const SosDetailDeclineRequested();
+}

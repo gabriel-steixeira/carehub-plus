@@ -14,11 +14,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/utils/date_format_helper.dart';
+import '../../../../shared/widgets/app_back_button.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_error_view.dart';
@@ -60,23 +63,35 @@ class _SosDetailView extends StatelessWidget {
       body: AppPageFrame(
         child: Column(
           children: [
-            const AppHeader(),
+            AppHeader(
+              showNotifications: false,
+              leading: AppBackButton(
+                onPressed: () => context.canPop()
+                    ? context.pop()
+                    : context.go(AppRoutes.home),
+              ),
+            ),
             Expanded(
-              child: BlocBuilder<SosDetailBloc, SosDetailState>(
-                builder: (context, state) => switch (state.status) {
-                  SosDetailStatus.initial ||
-                  SosDetailStatus.loading => const AppLoading(),
-                  SosDetailStatus.failure when state.detail == null =>
-                    AppErrorView(
-                      message:
-                          state.errorMessage ??
-                          'Não foi possível abrir o pedido de ajuda.',
-                      onRetry: () => context.read<SosDetailBloc>().add(
-                        SosDetailLoadRequested(alertId),
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: AppColors.splashGradient,
+                ),
+                child: BlocBuilder<SosDetailBloc, SosDetailState>(
+                  builder: (context, state) => switch (state.status) {
+                    SosDetailStatus.initial ||
+                    SosDetailStatus.loading => const AppLoading(),
+                    SosDetailStatus.failure when state.detail == null =>
+                      AppErrorView(
+                        message:
+                            state.errorMessage ??
+                            'Não foi possível abrir o pedido de ajuda.',
+                        onRetry: () => context.read<SosDetailBloc>().add(
+                          SosDetailLoadRequested(alertId),
+                        ),
                       ),
-                    ),
-                  _ => _SosDetailContent(state: state),
-                },
+                    _ => _SosDetailContent(state: state),
+                  },
+                ),
               ),
             ),
           ],
@@ -96,6 +111,8 @@ class _SosDetailContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final detail = state.detail!;
     final isAccepting = state.status == SosDetailStatus.accepting;
+    final isDeclining = state.status == SosDetailStatus.declining;
+    final isDeclined = state.status == SosDetailStatus.declined;
     final isAccepted =
         state.status == SosDetailStatus.accepted ||
         detail.status == SosAlertStatus.accepted;
@@ -109,8 +126,9 @@ class _SosDetailContent extends StatelessWidget {
         children: [
           Text(
             'Pedido de ajuda',
-            style: AppTypography.displayLarge.copyWith(
+            style: AppTypography.averiaHeadlineMedium.copyWith(
               color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -169,7 +187,29 @@ class _SosDetailContent extends StatelessWidget {
                 ],
               ),
             )
-          else if (!isFinished)
+          else if (isDeclined)
+            AppCard(
+              variant: AppCardVariant.filled,
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.info_rounded,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'Você avisou que não pode ajudar agora. Quem pediu foi '
+                      'informado.',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (!isFinished) ...[
             AppButton(
               label: 'Estou a caminho',
               icon: Icons.directions_run_rounded,
@@ -178,6 +218,16 @@ class _SosDetailContent extends StatelessWidget {
                 const SosDetailAcceptRequested(),
               ),
             ),
+            const SizedBox(height: AppSpacing.sm),
+            AppButton(
+              label: 'Não posso agora',
+              variant: AppButtonVariant.secondary,
+              isLoading: isDeclining,
+              onPressed: () => context.read<SosDetailBloc>().add(
+                const SosDetailDeclineRequested(),
+              ),
+            ),
+          ],
           if (state.status == SosDetailStatus.failure &&
               state.errorMessage != null) ...[
             const SizedBox(height: AppSpacing.md),

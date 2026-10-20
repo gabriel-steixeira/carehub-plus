@@ -19,6 +19,12 @@ enum SosDetailStatus {
 
   /// Aceite concluído: o pedido foi aceito por quem está na tela.
   accepted,
+
+  /// Enviando a recusa ("Não posso agora"). Mantém o detalhe já carregado.
+  declining,
+
+  /// Recusa concluída: quem está na tela avisou que não pode ajudar.
+  declined,
 }
 
 class SosDetailState extends Equatable {

@@ -28,6 +28,7 @@ class SosDetailBloc extends Bloc<SosDetailEvent, SosDetailState> {
       super(const SosDetailState()) {
     on<SosDetailLoadRequested>(_onLoad);
     on<SosDetailAcceptRequested>(_onAccept);
+    on<SosDetailDeclineRequested>(_onDecline);
   }
 
   final SosRepository _repository;
@@ -76,6 +77,36 @@ class SosDetailBloc extends Bloc<SosDetailEvent, SosDetailState> {
       // Recarrega o detalhe para refletir o novo status e quem aceitou.
       final detail = await _repository.fetchAlertDetail(alertId);
       emit(state.copyWith(status: SosDetailStatus.accepted, detail: detail));
+    } on AppException catch (e) {
+      emit(
+        state.copyWith(
+          status: SosDetailStatus.failure,
+          errorMessage: e.message,
+        ),
+      );
+    }
+  }
+
+  Future<void> _onDecline(
+    SosDetailDeclineRequested event,
+    Emitter<SosDetailState> emit,
+  ) async {
+    final alertId = _alertId;
+    if (alertId == null) return;
+
+    // Mantém o detalhe já carregado enquanto envia a recusa, para a tela não
+    // "piscar" uma tela de carregamento vazia.
+    emit(
+      state.copyWith(
+        status: SosDetailStatus.declining,
+        clearErrorMessage: true,
+      ),
+    );
+    try {
+      await _repository.declineAlert(alertId);
+      // Recarrega o detalhe para refletir o novo estado do pedido.
+      final detail = await _repository.fetchAlertDetail(alertId);
+      emit(state.copyWith(status: SosDetailStatus.declined, detail: detail));
     } on AppException catch (e) {
       emit(
         state.copyWith(
