@@ -29,6 +29,7 @@ class SosNetworkPicker extends StatelessWidget {
     required this.notifiedMemberIds,
     required this.onMemberToggled,
     required this.onOpenNetwork,
+    this.ownerWillBeNotified = false,
   });
 
   /// Rede de apoio disponível.
@@ -43,15 +44,21 @@ class SosNetworkPicker extends StatelessWidget {
   /// Abre a tela de rede de apoio para cadastrar pessoas.
   final VoidCallback onOpenNetwork;
 
+  /// Quando `true`, mesmo sem ninguém na rede o responsável pelo perfil será
+  /// avisado pelo app — o texto vazio reflete isso em vez de bloquear o pedido.
+  final bool ownerWillBeNotified;
+
   @override
   Widget build(BuildContext context) {
     if (members.isEmpty) {
       return Column(
         children: [
-          const AppEmptyView(
-            message:
-                'Sua rede de apoio está vazia.\n'
-                'Cadastre alguém para poder pedir ajuda.',
+          AppEmptyView(
+            message: ownerWillBeNotified
+                ? 'Ninguém cadastrado na rede. O responsável pelo perfil '
+                      'será avisado pelo app.'
+                : 'Sua rede de apoio está vazia.\n'
+                      'Cadastre alguém para poder pedir ajuda.',
             icon: Icons.group_add_rounded,
           ),
           AppButton(

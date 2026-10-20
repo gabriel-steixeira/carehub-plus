@@ -18,6 +18,7 @@ import '../../data/repositories/settings_repository.dart';
 import '../bloc/settings_bloc.dart';
 import '../widgets/delete_account_reauth_sheet.dart';
 import '../widgets/delete_account_warning_sheet.dart';
+import '../widgets/sos_alert_settings_card.dart';
 
 /// Caregiver Profile & Settings Page.
 class SettingsPage extends StatelessWidget {
@@ -110,6 +111,49 @@ class SettingsView extends StatelessWidget {
     }
   }
 
+  /// Dá retorno do salvamento das preferências de SOS: confirma com um
+  /// snackbar neutro ou mostra o erro, como o fluxo de exclusão já faz.
+  void _onSosSaveStateChanged(BuildContext context, SettingsState state) {
+    switch (state.sosSaveStatus) {
+      case SettingsSosSaveStatus.saved:
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                'Preferências de SOS salvas.',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textInverse,
+                ),
+              ),
+              backgroundColor: AppColors.primaryDark,
+            ),
+          );
+        break;
+
+      case SettingsSosSaveStatus.failure:
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                state.errorMessage ??
+                    'Não foi possível salvar suas preferências de SOS agora.',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textInverse,
+                ),
+              ),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        break;
+
+      case SettingsSosSaveStatus.idle:
+      case SettingsSosSaveStatus.saving:
+        break;
+    }
+  }
+
   void _showComingSoon(BuildContext context, String label) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -130,10 +174,19 @@ class SettingsView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background, // Header area background
-      body: BlocListener<SettingsBloc, SettingsState>(
-        listenWhen: (previous, current) =>
-            previous.deletionStatus != current.deletionStatus,
-        listener: _onDeletionStateChanged,
+      body: MultiBlocListener(
+        listeners: [
+          BlocListener<SettingsBloc, SettingsState>(
+            listenWhen: (previous, current) =>
+                previous.deletionStatus != current.deletionStatus,
+            listener: _onDeletionStateChanged,
+          ),
+          BlocListener<SettingsBloc, SettingsState>(
+            listenWhen: (previous, current) =>
+                previous.sosSaveStatus != current.sosSaveStatus,
+            listener: _onSosSaveStateChanged,
+          ),
+        ],
         child: BlocBuilder<SettingsBloc, SettingsState>(
           builder: (context, state) {
           if (state.status == SettingsStatus.loading) {
@@ -224,6 +277,11 @@ class SettingsView extends StatelessWidget {
                               ),
                             ],
                           ),
+                          const SizedBox(height: AppSpacing.lg),
+
+                          // Alertas de SOS: o dono sempre é avisado pelo app e
+                          // pode ativar o WhatsApp informando o número.
+                          SosAlertSettingsCard(state: state),
                           const SizedBox(height: AppSpacing.xl),
 
                           // Logout action.

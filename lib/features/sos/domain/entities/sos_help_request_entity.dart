@@ -21,6 +21,7 @@ class SosHelpRequestEntity extends Equatable {
     required this.taskId,
     required this.taskTitle,
     required this.notifiedMemberIds,
+    this.notifyOwner = false,
   });
 
   /// Perfil cuidado ao qual a tarefa pertence.
@@ -36,8 +37,15 @@ class SosHelpRequestEntity extends Equatable {
   /// Ids dos membros da rede de apoio avisados neste pedido.
   final List<String> notifiedMemberIds;
 
-  /// Um pedido só faz sentido com uma tarefa e alguém para avisar.
-  bool get isValid => taskId.isNotEmpty && notifiedMemberIds.isNotEmpty;
+  /// Quando `true`, o dono do perfil é destinatário especial do alerta (quem
+  /// pede não é o dono). Torna o pedido válido mesmo sem membros marcados,
+  /// porque o dono sempre será avisado pelo app.
+  final bool notifyOwner;
+
+  /// Um pedido só faz sentido com uma tarefa e alguém para avisar — um membro
+  /// marcado ou o dono do perfil como destinatário especial.
+  bool get isValid =>
+      taskId.isNotEmpty && (notifiedMemberIds.isNotEmpty || notifyOwner);
 
   @override
   List<Object?> get props => [
@@ -45,5 +53,6 @@ class SosHelpRequestEntity extends Equatable {
         taskId,
         taskTitle,
         notifiedMemberIds,
+        notifyOwner,
       ];
 }

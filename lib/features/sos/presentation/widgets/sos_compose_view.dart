@@ -99,6 +99,7 @@ class SosComposeView extends StatelessWidget {
           SosNetworkPicker(
             members: state.members,
             notifiedMemberIds: state.notifiedMemberIds,
+            ownerWillBeNotified: state.ownerWillBeNotified,
             onMemberToggled: (memberId) =>
                 bloc.add(SosMemberToggledEvent(memberId: memberId)),
             onOpenNetwork: openNetwork,

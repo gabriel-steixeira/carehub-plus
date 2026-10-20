@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../../home/data/models/caregiver_model.dart';
+import '../../../network/data/models/network_member_model.dart';
 
 /// Settings and preferences repository with real Firebase integration.
 class SettingsRepository {
@@ -63,6 +64,32 @@ class SettingsRepository {
           'settings': {key: value}
         }, SetOptions(merge: true));
       } catch (_) {}
+    }
+  }
+
+  /// Persiste a preferência de alerta de SOS do dono em `caregivers/{uid}`
+  /// (merge, para não sobrescrever o documento). Guarda o telefone (texto
+  /// livre; o backend normaliza) e o canal escolhido ([AlertChannel.app] ou
+  /// [AlertChannel.whatsapp]).
+  Future<void> updateSosAlertPreferences({
+    String? phone,
+    required AlertChannel channel,
+  }) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      throw const AppException('Usuário não autenticado. Faça login novamente.');
+    }
+
+    try {
+      await _firestore.collection('caregivers').doc(uid).set({
+        'phone': phone,
+        'sosAlertChannel': channel.value,
+      }, SetOptions(merge: true));
+    } on FirebaseException catch (error) {
+      throw AppException(
+        'Não foi possível salvar suas preferências de SOS. Tente novamente.',
+        code: error.code,
+      );
     }
   }
 }

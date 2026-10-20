@@ -31,6 +31,7 @@ class SosState extends Equatable {
     this.selectedTaskId,
     this.members = const [],
     this.notifiedMemberIds = const {},
+    this.isRequesterOwner = true,
     this.secondsRemaining = 0,
     this.secondsWaiting = 0,
     this.alertSnapshot,
@@ -47,6 +48,12 @@ class SosState extends Equatable {
   final String? selectedTaskId;
   final List<NetworkMemberModel> members;
   final Set<String> notifiedMemberIds;
+
+  /// Se quem está pedindo ajuda é o próprio dono do perfil. Quando `false`, o
+  /// dono é avisado como destinatário especial, então o pedido vale mesmo sem
+  /// membros marcados. Padrão `true` (seguro: exige rede até sabermos o dono).
+  final bool isRequesterOwner;
+
   final int secondsRemaining;
 
   /// Há quanto tempo o aviso saiu sem ninguém aceitar (etapa `waiting`).
@@ -93,8 +100,15 @@ class SosState extends Equatable {
     return null;
   }
 
-  /// O botão de SOS só libera com tarefa escolhida e alguém para avisar.
-  bool get canTriggerAlert => selectedTask != null && notifiedMemberIds.isNotEmpty;
+  /// Se o dono será avisado como destinatário especial deste pedido — ou seja,
+  /// quem está pedindo não é o dono do perfil.
+  bool get ownerWillBeNotified => !isRequesterOwner;
+
+  /// O botão de SOS libera com uma tarefa escolhida e alguém para avisar: um
+  /// membro marcado ou o dono do perfil (quando quem pede não é o dono).
+  bool get canTriggerAlert =>
+      selectedTask != null &&
+      (notifiedMemberIds.isNotEmpty || ownerWillBeNotified);
 
   SosState copyWith({
     SosStatus? status,
@@ -107,6 +121,7 @@ class SosState extends Equatable {
     bool clearSelectedTask = false,
     List<NetworkMemberModel>? members,
     Set<String>? notifiedMemberIds,
+    bool? isRequesterOwner,
     int? secondsRemaining,
     int? secondsWaiting,
     SosAlertSnapshotEntity? alertSnapshot,
@@ -127,6 +142,7 @@ class SosState extends Equatable {
           clearSelectedTask ? null : selectedTaskId ?? this.selectedTaskId,
       members: members ?? this.members,
       notifiedMemberIds: notifiedMemberIds ?? this.notifiedMemberIds,
+      isRequesterOwner: isRequesterOwner ?? this.isRequesterOwner,
       secondsRemaining: secondsRemaining ?? this.secondsRemaining,
       secondsWaiting: secondsWaiting ?? this.secondsWaiting,
       alertSnapshot: clearAlertSnapshot
@@ -149,6 +165,7 @@ class SosState extends Equatable {
         selectedTaskId,
         members,
         notifiedMemberIds,
+        isRequesterOwner,
         secondsRemaining,
         secondsWaiting,
         alertSnapshot,

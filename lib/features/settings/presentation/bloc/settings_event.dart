@@ -24,6 +24,31 @@ class SettingsToggleNotificationEvent extends SettingsEvent {
   List<Object?> get props => [key, value];
 }
 
+/// O dono digitou/alterou o número de WhatsApp para alertas de SOS.
+class SettingsSosPhoneChangedEvent extends SettingsEvent {
+  const SettingsSosPhoneChangedEvent({required this.phone});
+
+  final String phone;
+
+  @override
+  List<Object?> get props => [phone];
+}
+
+/// O dono alternou o canal de alerta de SOS (app ou também WhatsApp).
+class SettingsSosChannelChangedEvent extends SettingsEvent {
+  const SettingsSosChannelChangedEvent({required this.channel});
+
+  final AlertChannel channel;
+
+  @override
+  List<Object?> get props => [channel];
+}
+
+/// Salva as preferências de alerta de SOS do dono (telefone + canal).
+class SettingsSaveSosPreferencesEvent extends SettingsEvent {
+  const SettingsSaveSosPreferencesEvent();
+}
+
 /// Resolve o caso de exclusão (quem é afetado) antes de abrir o fluxo.
 class SettingsResolveDeletionEvent extends SettingsEvent {
   const SettingsResolveDeletionEvent();

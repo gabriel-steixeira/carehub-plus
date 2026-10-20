@@ -83,6 +83,7 @@ class SosBloc extends Bloc<SosEvent, SosState> {
       final members = await _repository.fetchSupportNetwork(
         careRecipientId: profileId,
       );
+      final isRequesterOwner = await _resolveIsRequesterOwner(profileId);
       final openTasks = profileId.isEmpty
           ? const <TaskModel>[]
           : await _repository.fetchOpenTasks(careRecipientId: profileId);
@@ -100,6 +101,7 @@ class SosBloc extends Bloc<SosEvent, SosState> {
           profiles: profiles,
           selectedProfileId: profileId,
           members: members,
+          isRequesterOwner: isRequesterOwner,
           // Em uma emergência, avisar todo mundo é o padrão: desmarcar é a
           // exceção, não a regra.
           notifiedMemberIds: members.map((member) => member.id).toSet(),
@@ -132,6 +134,7 @@ class SosBloc extends Bloc<SosEvent, SosState> {
       final members = await _repository.fetchSupportNetwork(
         careRecipientId: event.profileId,
       );
+      final isRequesterOwner = await _resolveIsRequesterOwner(event.profileId);
       final selectedTaskId = _resolveInitialTaskId(
         requestedTaskId: null,
         openTasks: openTasks,
@@ -142,6 +145,7 @@ class SosBloc extends Bloc<SosEvent, SosState> {
           openTasks: openTasks,
           selectedTaskId: selectedTaskId,
           members: members,
+          isRequesterOwner: isRequesterOwner,
           notifiedMemberIds: members.map((member) => member.id).toSet(),
         ),
       );
@@ -174,7 +178,7 @@ class SosBloc extends Bloc<SosEvent, SosState> {
     Emitter<SosState> emit,
   ) async {
     final task = state.selectedTask;
-    if (task == null || state.notifiedMemberIds.isEmpty) {
+    if (task == null || !state.canTriggerAlert) {
       emit(
         state.copyWith(
           errorMessage:
@@ -189,6 +193,7 @@ class SosBloc extends Bloc<SosEvent, SosState> {
       taskId: task.id,
       taskTitle: task.title,
       notifiedMemberIds: state.notifiedMemberIds.toList(),
+      notifyOwner: state.ownerWillBeNotified,
     );
 
     try {
@@ -439,6 +444,18 @@ class SosBloc extends Bloc<SosEvent, SosState> {
       }
     }
     return priorityTask.id;
+  }
+
+  /// Descobre se quem está pedindo é o dono do perfil. Numa falha de leitura,
+  /// assume `true` (o comportamento antigo: exigir a rede de apoio), para não
+  /// liberar um pedido por engano.
+  Future<bool> _resolveIsRequesterOwner(String profileId) async {
+    if (profileId.isEmpty) return true;
+    try {
+      return await _repository.isCurrentUserOwnerOf(profileId);
+    } on AppException {
+      return true;
+    }
   }
 
   /// Perfil que deve abrir selecionado: o pedido da rota, quando existe, ou o

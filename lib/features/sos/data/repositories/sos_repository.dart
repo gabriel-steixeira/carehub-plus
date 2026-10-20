@@ -116,6 +116,15 @@ class SosRepository {
       // O alerta pertence à dona do assistido. Num perfil compartilhado,
       // `requestedByUid` registra quem pediu (as regras conferem os dois).
       final owner = await _ownerOf(request.careRecipientId) ?? uid;
+
+      // Quando quem pede não é o dono, ele vira destinatário especial do
+      // alerta (avisado sempre pelo app). O canal é um retrato da preferência
+      // do dono no momento do alerta — mesmos nomes de campo que o backend lê.
+      final notifyOwner = owner != uid;
+      final ownerChannel = notifyOwner
+          ? await _ownerSosChannel(owner)
+          : AlertChannel.app;
+
       await _firestore.collection(_alertsCollection).doc(alertId).set({
         'id': alertId,
         'caregiverId': owner,
@@ -126,6 +135,8 @@ class SosRepository {
         'taskId': request.taskId,
         'taskTitle': request.taskTitle,
         'notifiedMemberIds': request.notifiedMemberIds,
+        if (notifyOwner) 'notifyOwner': true,
+        if (notifyOwner) 'ownerChannel': ownerChannel.value,
         'status': _statusPending,
         'createdAt': now,
         'updatedAt': now,
@@ -321,6 +332,28 @@ class SosRepository {
         .doc(careRecipientId)
         .get();
     return recipient.data()?['caregiverId'] as String?;
+  }
+
+  /// `true` quando o usuário autenticado é o dono do perfil [careRecipientId].
+  /// Usado pelo BLoC para liberar o pedido mesmo sem membros marcados quando
+  /// quem pede não é o dono (o dono será o destinatário especial do alerta).
+  Future<bool> isCurrentUserOwnerOf(String careRecipientId) async {
+    final owner = await _ownerOf(careRecipientId);
+    return owner != null && owner == _currentUserId();
+  }
+
+  /// Canal de SOS preferido do dono, lido de `caregivers/{ownerUid}`. Valores
+  /// ausentes/inválidos caem em [AlertChannel.app] (padrão seguro).
+  Future<AlertChannel> _ownerSosChannel(String ownerUid) async {
+    if (ownerUid.isEmpty) return AlertChannel.app;
+    final doc = await _firestore.collection('caregivers').doc(ownerUid).get();
+    final raw = doc.data()?['sosAlertChannel'];
+    if (raw is String) {
+      for (final channel in AlertChannel.values) {
+        if (channel.value == raw) return channel;
+      }
+    }
+    return AlertChannel.app;
   }
 
   String _currentUserId() {
