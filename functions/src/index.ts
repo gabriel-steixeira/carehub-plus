@@ -35,6 +35,6 @@ export {
   redeemInviteCode,
   revokeAccess,
 } from "./callable/invites";
-export { coraChat, tokeInterpret } from "./callable/assistants";
+export { coraChat, coraDailySuggestion, tokeInterpret } from "./callable/assistants";
 export { deleteAccount } from "./callable/account";
-export { acceptSosAlert } from "./callable/sos";
+export { acceptSosAlert, declineSosAlert, getSosAlertDetail } from "./callable/sos";
