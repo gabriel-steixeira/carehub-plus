@@ -21,6 +21,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import * as logger from "firebase-functions/logger";
 
+import { GrantRepository } from "../access/grantRepository";
 import { MemberContact } from "../repositories/careRepository";
 import { db } from "../shared/firestore";
 
@@ -56,6 +57,8 @@ export interface AppNotificationInput {
 export class AppNotifier {
   private readonly notifications = db.collection("notifications");
   private readonly pushTokens = db.collection("push_tokens");
+
+  constructor(private readonly grants: GrantRepository = new GrantRepository()) {}
 
   /** Notifica o membro, se ele tiver conta no app. Nunca lança erro. */
   async notifyMember(member: MemberContact, input: AppNotificationInput): Promise<void> {
@@ -111,7 +114,20 @@ export class AppNotifier {
     }
   }
 
+  /**
+   * Descobre a conta do membro. A fonte da verdade é a concessão de acesso:
+   * ao aceitar o convite, o `uid` da conta fica em `access_grants.principalUid`.
+   * O e-mail é só um complemento, para membros convidados por e-mail que ainda
+   * não têm concessão ligada a uma conta. Sem nenhum dos dois, não há como
+   * notificar pelo app.
+   */
   private async resolveUid(member: MemberContact): Promise<string | null> {
+    const grant = await this.grants.getByMember(member.id);
+    if (grant?.principalUid) return grant.principalUid;
+    return this.resolveUidByEmail(member);
+  }
+
+  private async resolveUidByEmail(member: MemberContact): Promise<string | null> {
     if (!member.email) return null;
     try {
       const user = await getAuth().getUserByEmail(member.email.toLowerCase());

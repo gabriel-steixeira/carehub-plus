@@ -24,6 +24,7 @@ import { DailyLimiter } from "../shared/dailyLimiter";
 import { db, maskPhone } from "../shared/firestore";
 import { contactKey, toWhatsAppNumber } from "../shared/phone";
 import { firstName } from "../shared/text";
+import { mirrorGrant } from "./grantMirror";
 import { GrantRepository, grantIdForMember, toDurationHours } from "./grantRepository";
 import { Channel, toAccessLevel, toPermissions } from "./types";
 
@@ -277,6 +278,7 @@ export class InviteService {
     }
     if (result !== "activated") throw new InviteError("not-found", INVALID_CODE_MESSAGE);
 
+    await this.mirrorNow(invite.grantId);
     await this.markUsed(invite.id);
     return {
       careRecipientId: invite.careRecipientId,
@@ -308,6 +310,7 @@ export class InviteService {
       if (invite.channel === "self" || invite.ownerId === uid || !invite.grantId) continue;
       if (invite.expiresAt.toMillis() <= Date.now() || !invite.careRecipientId) continue;
       if ((await this.grants.activate(invite.grantId, { uid })) !== "activated") continue;
+      await this.mirrorNow(invite.grantId);
       await this.markUsed(invite.id);
       claimed.push({
         careRecipientId: invite.careRecipientId,
@@ -406,6 +409,25 @@ export class InviteService {
     );
     await this.markUsed(invite.id);
     return { kind: "accepted", recipientFirstName };
+  }
+
+  /**
+   * Espelha a concessão no assistido na mesma hora do aceite, sem esperar o
+   * trigger `onAccessGrantWritten`. Isso garante que `accessUids`/`access`
+   * já estejam gravados quando o app volta para o início e lista os perfis
+   * compartilhados — senão o assistido só apareceria depois (o trigger é
+   * assíncrono). O trigger continua existindo e é idempotente: reaplica o
+   * mesmo estado. Uma falha aqui não derruba o aceite — o trigger cobre.
+   */
+  private async mirrorNow(grantId: string): Promise<void> {
+    try {
+      const after = await this.grants.getRaw(grantId);
+      await mirrorGrant(grantId, undefined, after, this.grants);
+    } catch (_) {
+      logger.warn("Espelho imediato do convite falhou; o trigger vai cobrir.", {
+        grantId,
+      });
+    }
   }
 
   private async linkOwnerNumber(ownerUid: string, fromKey: string): Promise<void> {

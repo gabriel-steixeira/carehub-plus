@@ -3,6 +3,8 @@
  *
  * - coraChat: uma mensagem para a Cora. O backend confere o acesso ao
  *   assistido, guarda o histórico e o rascunho e chama o Gemini.
+ * - coraDailySuggestion: uma sugestão proativa por assistido por dia, com
+ *   cache diário no Firestore (no máximo uma chamada ao Gemini por dia).
  * - tokeInterpret: triagem do Toke com o Gemini; as regras da conta ficam
  *   no app.
  * As duas exigem login e somam na mesma cota diária de IA por pessoa. A
@@ -19,6 +21,7 @@ import { CallableRequest, HttpsError, onCall } from "firebase-functions/v2/https
 
 import { ChatTurn, GeminiClient, GeminiError } from "../ai/geminiClient";
 import { CoraAccessError, CoraBrain } from "../assistants/cora/coraBrain";
+import { CoraDailySuggestion } from "../assistants/cora/coraDailySuggestion";
 import { SupportContext, TokeInterpreter } from "../assistants/toke/tokeInterpreter";
 import { aiDailyLimit, geminiApiKey, geminiModel, REGION } from "../config";
 import { DailyLimiter } from "../shared/dailyLimiter";
@@ -74,6 +77,23 @@ export const coraChat = onCall(options, async (request) => {
     if (error instanceof CoraAccessError) throw new HttpsError("permission-denied", error.message);
     logger.error("coraChat falhou.", { reason: error instanceof Error ? error.message : String(error) });
     throw new HttpsError("internal", "Não consegui consultar a Cora agora. Tente novamente em instantes.");
+  }
+});
+
+export const coraDailySuggestion = onCall(options, async (request) => {
+  const uid = requireUid(request);
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  const careRecipientId = requiredString(data.careRecipientId, "careRecipientId", 200);
+
+  try {
+    return await new CoraDailySuggestion({
+      generator: generator(),
+      aiDailyLimit: aiDailyLimit.value(),
+    }).suggest({ identity: { uid, contactKey: null }, careRecipientId });
+  } catch (error) {
+    if (error instanceof CoraAccessError) throw new HttpsError("permission-denied", error.message);
+    logger.error("coraDailySuggestion falhou.", { reason: error instanceof Error ? error.message : String(error) });
+    throw new HttpsError("internal", "Não consegui gerar a sugestão da Cora agora. Tente novamente em instantes.");
   }
 });
 

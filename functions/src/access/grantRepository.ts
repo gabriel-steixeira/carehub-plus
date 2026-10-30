@@ -61,6 +61,12 @@ export class GrantRepository {
     return snapshot.exists ? this.toGrant(snapshot) : null;
   }
 
+  /** Dados crus da concessão, para espelhar na hora (sem esperar o trigger). */
+  async getRaw(grantId: string): Promise<FirebaseFirestore.DocumentData | undefined> {
+    const snapshot = await this.grants.doc(grantId).get();
+    return snapshot.exists ? snapshot.data() : undefined;
+  }
+
   async getByMember(memberId: string): Promise<AccessGrant | null> {
     return this.get(grantIdForMember(memberId));
   }
