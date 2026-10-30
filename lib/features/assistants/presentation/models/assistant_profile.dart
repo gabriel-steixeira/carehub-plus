@@ -43,6 +43,7 @@ class AssistantProfile {
     required this.errorMessage,
     this.tint = AppColors.tintPink,
     this.accentColor,
+    this.disclaimer,
   });
 
   /// Nome em destaque no cartão de identidade. Ex.: `CORA`.
@@ -74,4 +75,10 @@ class AssistantProfile {
   ///
   /// Quando ausente, o chat mantém a identidade roxa padrão.
   final Color? accentColor;
+
+  /// Aviso discreto de que o assistente é uma IA e pode errar.
+  ///
+  /// Quando `null`, nenhum aviso é exibido. Mostrado perto da barra de
+  /// escrita, em texto pequeno e de baixo relevo.
+  final String? disclaimer;
 }

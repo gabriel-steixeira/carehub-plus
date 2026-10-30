@@ -19,6 +19,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/utils/input_formatters.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../services/image_upload_service.dart';
 import '../../../../shared/widgets/app_button.dart';
@@ -171,7 +172,9 @@ class _EditProfileFormState extends State<EditProfileForm> {
     // `validate` já exibe as mensagens sob cada campo.
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    final phone = _phoneController.text.trim();
+    // Salva apenas os dígitos: a máscara é visual e o backend recebe o número
+    // limpo, como antes.
+    final phone = onlyDigits(_phoneController.text);
     final currentProfile = context.read<EditProfileBloc>().state.profile;
 
     context.read<EditProfileBloc>().add(
@@ -248,6 +251,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
             filled: true,
             prefixIcon: Icons.phone_outlined,
             keyboardType: TextInputType.phone,
+            inputFormatters: const [PhoneInputFormatter()],
             textInputAction: TextInputAction.done,
             autofillHints: const [AutofillHints.telephoneNumber],
             validator: Validators.optionalPhone,

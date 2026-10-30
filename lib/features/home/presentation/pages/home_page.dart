@@ -234,8 +234,15 @@ class _EmptyState extends StatelessWidget {
           ),
         ),
         // Quem foi convidado por outra pessoa entra por aqui.
+        // Ao voltar do resgate, recarrega a lista para o assistido
+        // compartilhado aparecer sem precisar de um novo login.
         TextButton.icon(
-          onPressed: () => context.push(AppRoutes.redeemInvite),
+          onPressed: () async {
+            await context.push(AppRoutes.redeemInvite);
+            if (context.mounted) {
+              context.read<HomeBloc>().add(const HomeLoadEvent());
+            }
+          },
           icon: const Icon(Icons.vpn_key_outlined, color: AppColors.primary),
           label: Text(
             'Tenho um convite',

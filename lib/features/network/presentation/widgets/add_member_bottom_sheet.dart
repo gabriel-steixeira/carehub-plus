@@ -5,9 +5,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_responsive.dart';
+import '../../../../core/utils/input_formatters.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_dropdown_field.dart';
+import '../../../../shared/widgets/app_form_label.dart';
 import '../../../../shared/widgets/app_member_avatar.dart';
 import '../../../../shared/widgets/app_scroll_fade.dart';
 import '../../../../shared/widgets/app_text_field.dart';
@@ -84,7 +87,7 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
   String? _durationError;
 
   /// Por onde chegam os alertas de SOS e de tarefa.
-  AlertDelivery _alertDelivery = AlertDelivery.both;
+  AlertDelivery _alertDelivery = AlertDelivery.app;
 
   /// Canal do convite enviado ao salvar (`null` = não enviar).
   InviteChannel? _inviteChannel = InviteChannel.app;
@@ -433,7 +436,8 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
         NetworkUpdateMemberEvent(
           memberId: member.id,
           name: _nameController.text.trim(),
-          phone: _phoneController.text.trim(),
+          // Máscara é só visual; grava apenas os dígitos.
+          phone: onlyDigits(_phoneController.text),
           role: _role,
           relationship: relationship.isEmpty ? null : relationship,
           email: email.isEmpty ? null : email,
@@ -453,7 +457,8 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
     context.read<NetworkBloc>().add(
       NetworkAddMemberEvent(
         name: _nameController.text.trim(),
-        phone: _phoneController.text.trim(),
+        // Máscara é só visual; grava apenas os dígitos.
+        phone: onlyDigits(_phoneController.text),
         role: _role,
         relationship: relationship.isEmpty ? null : relationship,
         email: email.isEmpty ? null : email,
@@ -566,6 +571,8 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
                           label: 'Telefone / WhatsApp',
                           hint: '(11) 99999-9999',
                           prefixIcon: Icons.phone_outlined,
+                          keyboardType: TextInputType.phone,
+                          inputFormatters: const [PhoneInputFormatter()],
                           validator: (val) {
                             if (val == null || val.trim().isEmpty) {
                               return 'Informe o telefone.';
@@ -679,38 +686,23 @@ class _MemberDropdown<T> extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.border),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<T>(
-              value: value,
-              isExpanded: true,
-              items: items.map((item) {
-                return DropdownMenuItem<T>(
+        AppFormLabel(label),
+        AppDropdownField<T>(
+          value: value,
+          items: items
+              .map(
+                (item) => DropdownMenuItem<T>(
                   value: item,
                   child: Text(
                     labelBuilder(item),
                     style: AppTypography.bodyMedium,
                   ),
-                );
-              }).toList(),
-              onChanged: (item) {
-                if (item != null) onChanged(item);
-              },
-            ),
-          ),
+                ),
+              )
+              .toList(),
+          onChanged: (item) {
+            if (item != null) onChanged(item);
+          },
         ),
       ],
     );

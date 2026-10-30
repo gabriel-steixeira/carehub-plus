@@ -31,6 +31,9 @@ class TokeChatPage extends StatelessWidget {
     inputHint: 'Pergunte algo para o Toke...',
     thinkingLabel: 'Toke está preparando uma resposta...',
     errorMessage: 'Erro ao conversar com o Toke.',
+    disclaimer:
+        'O Toke é uma IA e pode cometer erros. Confira informações '
+        'importantes e não substitua orientação profissional.',
   );
 
   @override

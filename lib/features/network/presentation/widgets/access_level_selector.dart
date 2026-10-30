@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../shared/widgets/app_form_label.dart';
 import '../../data/models/network_member_model.dart';
 
 /// Aparência de cada nível de acesso (ícone e cores do avatar do cartão).
@@ -72,14 +73,7 @@ class AccessLevelSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
+        AppFormLabel(label),
         for (final level in _displayOrder) ...[
           _AccessLevelCard(
             level: level,

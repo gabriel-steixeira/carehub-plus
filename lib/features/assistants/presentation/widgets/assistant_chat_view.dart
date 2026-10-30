@@ -20,6 +20,7 @@ import '../../../../app/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_responsive.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../../../shared/widgets/app_bottom_navigation.dart';
 import '../../../../shared/widgets/app_empty_view.dart';
 import '../../../../shared/widgets/app_error_view.dart';
@@ -159,6 +160,20 @@ class _AssistantChatViewState extends State<AssistantChatView> {
                       ),
                     ),
                     Expanded(child: _buildConversation(profile)),
+                    if (profile.disclaimer != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.xs,
+                        ),
+                        child: Text(
+                          profile.disclaimer!,
+                          textAlign: TextAlign.center,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
                     AppChatInputBar(
                       controller: _textController,
                       hintText: profile.inputHint,

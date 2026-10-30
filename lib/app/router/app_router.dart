@@ -1,5 +1,7 @@
 import 'package:go_router/go_router.dart';
 
+import '../../services/auth_service.dart';
+import 'go_router_refresh_stream.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/about/presentation/pages/about_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -56,8 +58,54 @@ class AppRoutes {
 class AppRouter {
   AppRouter._();
 
+  /// Fonte do estado de autenticação para o Auth Gate do roteador.
+  ///
+  /// O Firebase persiste a sessão no dispositivo, então `authStateChanges`
+  /// restaura o usuário logado na abertura do app. O roteador escuta esse
+  /// fluxo para reavaliar o `redirect` sempre que o login mudar.
+  static final AuthService _authService = AuthService();
+
+  /// Rotas acessíveis sem estar logado. Em qualquer outra rota, um usuário
+  /// não autenticado é mandado para o login.
+  static const List<String> _publicRoutes = [
+    AppRoutes.splash,
+    AppRoutes.login,
+    AppRoutes.register,
+    AppRoutes.forgotPassword,
+    AppRoutes.redeemInvite,
+  ];
+
   static final GoRouter router = GoRouter(
     initialLocation: AppRoutes.splash,
+    // Reavalia o redirect sempre que o estado de autenticação muda (login,
+    // logout, expiração da sessão).
+    refreshListenable: GoRouterRefreshStream(_authService.authStateChanges),
+    // Auth Gate: decide o destino a partir do estado de autenticação, em vez
+    // de deixar a Splash navegar sempre para o login.
+    redirect: (context, state) {
+      final isLoggedIn = _authService.currentUser != null;
+      final location = state.matchedLocation;
+      final isPublicRoute = _publicRoutes.contains(location);
+
+      // Enquanto a Splash anima, deixa ela em paz; ela decide quando sair.
+      if (location == AppRoutes.splash) return null;
+
+      // Logado numa tela pública de entrada → vai para a home.
+      if (isLoggedIn &&
+          (location == AppRoutes.login ||
+              location == AppRoutes.register ||
+              location == AppRoutes.forgotPassword)) {
+        return AppRoutes.home;
+      }
+
+      // Não logado tentando acessar tela protegida → vai para o login.
+      if (!isLoggedIn && !isPublicRoute) {
+        return AppRoutes.login;
+      }
+
+      // Sem redirecionamento.
+      return null;
+    },
     routes: [
       GoRoute(
         path: AppRoutes.splash,

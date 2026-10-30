@@ -77,6 +77,35 @@ class DashboardSummaryModel extends Equatable {
       totalTasksTodayCount > 0 &&
       completedTasksTodayCount >= totalTasksTodayCount;
 
+  /// Cria uma cópia trocando apenas os campos informados. Útil para anexar
+  /// as sugestões da Cora ao resumo já carregado, sem reconstruí-lo campo a
+  /// campo.
+  DashboardSummaryModel copyWith({
+    int? monitoredProfilesCount,
+    int? pendingTasksCount,
+    int? supportNetworkCount,
+    int? unreadChatsCount,
+    int? completedTasksTodayCount,
+    int? totalTasksTodayCount,
+    int? overdueTasksCount,
+    NextTaskPreviewModel? nextTask,
+    List<SuggestionModel>? suggestions,
+  }) {
+    return DashboardSummaryModel(
+      monitoredProfilesCount:
+          monitoredProfilesCount ?? this.monitoredProfilesCount,
+      pendingTasksCount: pendingTasksCount ?? this.pendingTasksCount,
+      supportNetworkCount: supportNetworkCount ?? this.supportNetworkCount,
+      unreadChatsCount: unreadChatsCount ?? this.unreadChatsCount,
+      completedTasksTodayCount:
+          completedTasksTodayCount ?? this.completedTasksTodayCount,
+      totalTasksTodayCount: totalTasksTodayCount ?? this.totalTasksTodayCount,
+      overdueTasksCount: overdueTasksCount ?? this.overdueTasksCount,
+      nextTask: nextTask ?? this.nextTask,
+      suggestions: suggestions ?? this.suggestions,
+    );
+  }
+
   factory DashboardSummaryModel.fromJson(Map<String, dynamic> json) {
     return DashboardSummaryModel(
       monitoredProfilesCount: json['monitoredProfilesCount'] as int? ?? 0,

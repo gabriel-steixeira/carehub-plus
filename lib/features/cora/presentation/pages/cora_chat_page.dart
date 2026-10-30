@@ -32,9 +32,13 @@ class CoraChatPage extends StatelessWidget {
     subtitle: 'Simplificando o cuidado, todos os dias',
     avatarAsset: 'assets/images/cora_avatar.png',
     tint: AppColors.tintPink,
+    accentColor: AppColors.primary,
     inputHint: 'Pergunte algo para a Cora...',
     thinkingLabel: 'Cora está analisando...',
     errorMessage: 'Erro ao conversar com a Cora.',
+    disclaimer:
+        'A Cora é uma IA e pode cometer erros. Confira informações '
+        'importantes e não substitua orientação profissional.',
   );
 
   @override

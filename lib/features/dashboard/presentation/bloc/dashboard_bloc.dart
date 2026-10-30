@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../services/selected_profile_service.dart';
+import '../../../cora/data/repositories/daily_suggestion_repository.dart';
 import '../../../home/data/models/care_recipient_model.dart';
 import '../../../home/data/models/caregiver_model.dart';
 import '../../data/models/dashboard_summary_model.dart';
@@ -11,15 +12,20 @@ part 'dashboard_event.dart';
 part 'dashboard_state.dart';
 
 class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
-  DashboardBloc({required DashboardRepository repository})
-    : _repository = repository,
-      super(const DashboardState()) {
+  DashboardBloc({
+    required DashboardRepository repository,
+    DailySuggestionRepository? dailySuggestionRepository,
+  }) : _repository = repository,
+       _dailySuggestionRepository =
+           dailySuggestionRepository ?? DailySuggestionRepository(),
+       super(const DashboardState()) {
     on<DashboardLoadEvent>(_onLoad);
     on<DashboardSelectProfileEvent>(_onSelectProfile);
     on<DashboardSearchQueryChangedEvent>(_onSearchQueryChanged);
   }
 
   final DashboardRepository _repository;
+  final DailySuggestionRepository _dailySuggestionRepository;
 
   Future<void> _onLoad(
     DashboardLoadEvent event,
@@ -35,12 +41,16 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         profiles,
       );
 
-      final summary = selectedId.isNotEmpty
+      final baseSummary = selectedId.isNotEmpty
           ? await _repository.fetchDashboardSummary(
               profileId: selectedId,
               monitoredProfilesCount: profiles.length,
             )
           : null;
+
+      final summary = baseSummary == null
+          ? null
+          : await _withDailySuggestions(baseSummary, selectedId);
 
       emit(
         state.copyWith(
@@ -75,9 +85,13 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     );
 
     try {
-      final summary = await _repository.fetchDashboardSummary(
+      final baseSummary = await _repository.fetchDashboardSummary(
         profileId: event.profileId,
         monitoredProfilesCount: state.profiles.length,
+      );
+      final summary = await _withDailySuggestions(
+        baseSummary,
+        event.profileId,
       );
       emit(state.copyWith(status: DashboardStatus.success, summary: summary));
     } catch (e) {
@@ -95,6 +109,24 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     Emitter<DashboardState> emit,
   ) {
     emit(state.copyWith(searchQuery: event.query));
+  }
+
+  /// Anexa a sugestão diária da Cora ao resumo já carregado, sempre escopada
+  /// pelo [careRecipientId]. A busca é tolerante a falha: se der erro, o
+  /// resumo volta sem sugestões — uma sugestão que falha nunca derruba o
+  /// Dashboard.
+  Future<DashboardSummaryModel> _withDailySuggestions(
+    DashboardSummaryModel summary,
+    String careRecipientId,
+  ) async {
+    if (careRecipientId.isEmpty) return summary;
+    try {
+      final suggestions = await _dailySuggestionRepository
+          .fetchDailySuggestions(careRecipientId: careRecipientId);
+      return summary.copyWith(suggestions: suggestions);
+    } catch (_) {
+      return summary;
+    }
   }
 
   /// Resolve qual perfil exibir, preferindo, nesta ordem: o id recebido por

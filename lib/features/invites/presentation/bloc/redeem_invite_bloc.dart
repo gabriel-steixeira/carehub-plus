@@ -62,6 +62,10 @@ class RedeemInviteBloc extends Bloc<RedeemInviteEvent, RedeemInviteState> {
     emit(state.copyWith(status: RedeemInviteStatus.submitting));
     try {
       final redeemed = await _repository.redeemCode(code);
+      // Materializa o vínculo no backend agora (grava `accessUids`), para o
+      // assistido compartilhado já aparecer na Home sem precisar de novo login.
+      // Idempotente: se falhar, o acesso recém-resgatado continua valendo.
+      await _claimAfterRedeem();
       await _selectProfile(redeemed);
       emit(
         RedeemInviteState(
@@ -77,6 +81,18 @@ class RedeemInviteBloc extends Bloc<RedeemInviteEvent, RedeemInviteState> {
         ),
       );
     }
+  }
+
+  /// Garante que o convite recém-resgatado já esteja reivindicado no backend.
+  ///
+  /// A Home lista os compartilhados pelo campo `accessUids` do assistido, que
+  /// é gravado pela função `claimPendingInvites`. Sem esta chamada, o vínculo
+  /// só era materializado no próximo login. É conveniência: uma falha aqui não
+  /// invalida o resgate, então o sucesso é preservado.
+  Future<void> _claimAfterRedeem() async {
+    try {
+      await _repository.claimPendingInvites();
+    } catch (_) {}
   }
 
   /// Seleção é conveniência: se falhar, o acesso continua valendo.

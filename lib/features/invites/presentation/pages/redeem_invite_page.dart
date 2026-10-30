@@ -84,7 +84,14 @@ class RedeemInviteView extends StatelessWidget {
                               state.redeemed != null
                           ? RedeemInviteSuccessView(
                               redeemed: state.redeemed!,
-                              onGoHome: () => context.go(AppRoutes.home),
+                              // Volta pela pilha (pop) quando a tela foi
+                              // empilhada sobre a Home: assim o `await push`
+                              // da Home retorna e recarrega a lista com o
+                              // assistido compartilhado. Se não houver pilha
+                              // (acesso direto), vai para a Home.
+                              onGoHome: () => context.canPop()
+                                  ? context.pop()
+                                  : context.go(AppRoutes.home),
                               onUseAnother: () => context
                                   .read<RedeemInviteBloc>()
                                   .add(const RedeemInviteResetEvent()),

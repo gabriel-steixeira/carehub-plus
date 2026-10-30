@@ -19,10 +19,12 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_dropdown_field.dart';
+import '../../../../shared/widgets/app_form_label.dart';
 import '../../../../shared/widgets/app_member_avatar.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/category_chip_selector.dart';
 import '../../../categories/presentation/bloc/care_categories_bloc.dart';
-import '../../../categories/presentation/models/category_visuals.dart';
 import '../../../network/data/models/network_member_model.dart';
 import '../../../network/presentation/bloc/network_bloc.dart';
 import '../bloc/chat_bloc.dart';
@@ -180,14 +182,7 @@ class _CreateChatRoomBottomSheetState extends State<CreateChatRoomBottomSheet> {
                       ),
                       const SizedBox(height: AppSpacing.lg),
 
-                      Text(
-                        'Responsável pelo assunto (opcional)',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
+                      const AppFormLabel('Responsável pelo assunto (opcional)'),
                       _ChatMemberSelector(
                         careRecipientId: widget.careRecipientId,
                         selectedMember: _selectedMember,
@@ -196,14 +191,7 @@ class _CreateChatRoomBottomSheetState extends State<CreateChatRoomBottomSheet> {
                       ),
                       const SizedBox(height: AppSpacing.lg),
 
-                      Text(
-                        'Categoria',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
+                      const AppFormLabel('Categoria'),
                       BlocBuilder<CareCategoriesBloc, CareCategoriesState>(
                         builder: (context, categoriesState) {
                           final categories = categoriesState.categories;
@@ -219,41 +207,11 @@ class _CreateChatRoomBottomSheetState extends State<CreateChatRoomBottomSheet> {
                             );
                           }
 
-                          final effectiveId =
-                              _categoryId ?? categories.first.id;
-
-                          return Wrap(
-                            spacing: AppSpacing.sm,
-                            children: categories.map((category) {
-                              final isSelected = effectiveId == category.id;
-                              final color = colorForCategory(category);
-                              return ChoiceChip(
-                                label: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      iconForCategory(category),
-                                      size: 14,
-                                      color: isSelected ? Colors.white : color,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(category.label),
-                                  ],
-                                ),
-                                selected: isSelected,
-                                selectedColor: AppColors.primary,
-                                labelStyle: AppTypography.labelSmall.copyWith(
-                                  color: isSelected
-                                      ? Colors.white
-                                      : AppColors.textPrimary,
-                                ),
-                                onSelected: (selected) {
-                                  if (selected) {
-                                    setState(() => _categoryId = category.id);
-                                  }
-                                },
-                              );
-                            }).toList(),
+                          return CategoryFormSelector(
+                            categories: categories,
+                            selectedCategoryId: _categoryId,
+                            onCategorySelected: (id) =>
+                                setState(() => _categoryId = id),
                           );
                         },
                       ),
@@ -334,48 +292,38 @@ class _ChatMemberSelector extends StatelessWidget {
       );
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<NetworkMemberModel>(
-          value: effectiveMember,
-          hint: Text(
-            'Sem responsável',
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-          isExpanded: true,
-          items: members
-              .map(
-                (member) => DropdownMenuItem<NetworkMemberModel>(
-                  value: member,
-                  child: Row(
-                    children: [
-                      AppMemberAvatar(
-                        photo: member.photoUrl,
-                        diameter: AppSpacing.xl,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Text(
-                          member.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.bodyMedium,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-              .toList(),
-          onChanged: onChanged,
+    return AppDropdownField<NetworkMemberModel>(
+      value: effectiveMember,
+      hint: Text(
+        'Sem responsável',
+        style: AppTypography.bodyMedium.copyWith(
+          color: AppColors.textSecondary,
         ),
       ),
+      onChanged: onChanged,
+      items: members
+          .map(
+            (member) => DropdownMenuItem<NetworkMemberModel>(
+              value: member,
+              child: Row(
+                children: [
+                  AppMemberAvatar(
+                    photo: member.photoUrl,
+                    diameter: AppSpacing.xl,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      member.name,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }

@@ -64,9 +64,6 @@ class _DeleteAccountReauthSheetState extends State<DeleteAccountReauthSheet> {
   bool get _usesGoogle =>
       _authService.currentProviderIds.contains('google.com');
 
-  bool get _usesFacebook =>
-      _authService.currentProviderIds.contains('facebook.com');
-
   @override
   void dispose() {
     _passwordController.dispose();
@@ -219,17 +216,6 @@ class _DeleteAccountReauthSheetState extends State<DeleteAccountReauthSheet> {
           variant: AppButtonVariant.destructive,
           icon: Icons.login_rounded,
           onPressed: () => _run(_authService.reauthenticateWithGoogle),
-        ),
-      ];
-    }
-
-    if (_usesFacebook) {
-      return [
-        AppButton(
-          label: 'Confirmar com Facebook',
-          variant: AppButtonVariant.destructive,
-          icon: Icons.login_rounded,
-          onPressed: () => _run(_authService.reauthenticateWithFacebook),
         ),
       ];
     }

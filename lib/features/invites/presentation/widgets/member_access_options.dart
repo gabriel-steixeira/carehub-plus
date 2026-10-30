@@ -19,6 +19,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../shared/widgets/app_form_label.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../network/data/models/network_member_model.dart';
 import '../../domain/entities/invite_channel.dart';
@@ -159,19 +160,13 @@ class _MemberAccessOptionsState extends State<MemberAccessOptions> {
     return hours == null || hours <= 0 ? 0 : hours;
   }
 
-  TextStyle get _sectionLabel => AppTypography.bodyMedium.copyWith(
-    color: AppColors.textPrimary,
-    fontWeight: FontWeight.w500,
-  );
-
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // ── Prazo de acesso ───────────────────────────────────────────
-        Text('Prazo de acesso', style: _sectionLabel),
-        const SizedBox(height: AppSpacing.xs),
+        const AppFormLabel('Prazo de acesso', spacing: AppSpacing.xs),
         Text(
           'Conta a partir de quando a pessoa aceita o convite. Você pode '
           'remover o acesso a qualquer momento.',
@@ -227,8 +222,7 @@ class _MemberAccessOptionsState extends State<MemberAccessOptions> {
         const SizedBox(height: AppSpacing.lg),
 
         // ── Canal de alertas ──────────────────────────────────────────
-        Text('Como recebe os alertas', style: _sectionLabel),
-        const SizedBox(height: AppSpacing.sm),
+        const AppFormLabel('Como recebe os alertas'),
         for (final delivery in AlertDelivery.values) ...[
           _OptionCard(
             icon: switch (delivery) {
@@ -253,8 +247,7 @@ class _MemberAccessOptionsState extends State<MemberAccessOptions> {
         const SizedBox(height: AppSpacing.md),
 
         // ── Canal do convite ──────────────────────────────────────────
-        Text('Como enviar o convite', style: _sectionLabel),
-        const SizedBox(height: AppSpacing.sm),
+        const AppFormLabel('Como enviar o convite'),
         if (widget.allowNoInvite) ...[
           _OptionCard(
             icon: Icons.do_not_disturb_on_outlined,

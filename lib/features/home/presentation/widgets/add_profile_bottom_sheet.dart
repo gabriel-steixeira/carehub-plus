@@ -9,6 +9,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/app_responsive.dart';
 import '../../../../services/image_upload_service.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_form_label.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../data/models/care_recipient_type.dart';
 import '../bloc/home_bloc.dart';
@@ -439,14 +440,7 @@ class _DatePickerField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Data de Nascimento',
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
+        const AppFormLabel('Data de Nascimento'),
         GestureDetector(
           onTap: onTap,
           child: Container(
