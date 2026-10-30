@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -64,5 +61,15 @@ class DefaultFirebaseOptions {
     storageBucket: 'carehub-plus-21164.firebasestorage.app',
     iosClientId: '970167831719-pulc0aa9stkf322e9i97013pcdvecj09.apps.googleusercontent.com',
     iosBundleId: 'com.carehubplus.carehubPlus',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyAGh9cino_TbX_GSLoWkfH01awHGf3Tym4',
+    appId: '1:970167831719:web:f6c8393fdfcd11ebe65f82',
+    messagingSenderId: '970167831719',
+    projectId: 'carehub-plus-21164',
+    authDomain: 'carehub-plus-21164.firebaseapp.com',
+    storageBucket: 'carehub-plus-21164.firebasestorage.app',
+    measurementId: 'G-BVKZTGQPED',
   );
 }
