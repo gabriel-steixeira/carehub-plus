@@ -1,9 +1,16 @@
 /*
- * CareHub Plus — Widget Compartilhado / Seletor de Categoria em Chips
+ * CareHub Plus — Widget Compartilhado / Pílulas de Categoria
  *
- * Fileira horizontal de chips de categoria com um chip "+" ao final para abrir
- * o gerenciador (`ManageCategoriesBottomSheet`). Usado por Tasks e Chat para
- * que os dois filtros de categoria fiquem visualmente idênticos.
+ * Fonte única da aparência das pílulas de categoria do app. Expõe três peças
+ * que compartilham exatamente o mesmo visual (cápsula arredondada, ícone
+ * pequeno, cor da categoria quando selecionada e sombra suave):
+ *   • [CategoryPill]        — a pílula em si, reutilizável;
+ *   • [CategoryChipSelector]— fileira de filtro ("Todos" + categorias + "+"),
+ *                             usada em Tasks e Chat;
+ *   • [CategoryFormSelector]— grade de seleção para formulários (nova tarefa /
+ *                             novo assunto), onde uma categoria fica sempre
+ *                             escolhida.
+ * Assim todo lugar que mostra ou seleciona categoria fica visualmente idêntico.
  *
  * Author: Vitoria Lana
  * Created on: 23/08/2026
@@ -48,18 +55,20 @@ class CategoryChipSelector extends StatelessWidget {
       physics: const BouncingScrollPhysics(),
       child: Row(
         children: [
-          _CategoryChip(
+          CategoryPill(
             label: 'Todos',
             isSelected: selectedCategoryId == null,
+            semanticsPrefix: 'Filtrar por',
             onTap: () => onCategorySelected(null),
           ),
           const SizedBox(width: AppSpacing.xs),
           for (final category in categories) ...[
-            _CategoryChip(
+            CategoryPill(
               label: category.label,
               icon: iconForCategory(category),
               color: colorForCategory(category),
               isSelected: selectedCategoryId == category.id,
+              semanticsPrefix: 'Filtrar por',
               onTap: () => onCategorySelected(
                 selectedCategoryId == category.id ? null : category.id,
               ),
@@ -73,20 +82,82 @@ class CategoryChipSelector extends StatelessWidget {
   }
 }
 
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
+/// Grade de seleção de categoria para formulários (nova tarefa, novo assunto).
+///
+/// Diferente do [CategoryChipSelector], não tem a opção "Todos" nem o botão de
+/// gerenciar: aqui uma categoria fica **sempre** escolhida. Quebra em várias
+/// linhas com [Wrap] para caber em modais estreitos.
+class CategoryFormSelector extends StatelessWidget {
+  const CategoryFormSelector({
+    super.key,
+    required this.categories,
+    required this.selectedCategoryId,
+    required this.onCategorySelected,
+  });
+
+  /// Categorias disponíveis, na ordem em que devem aparecer.
+  final List<CareCategoryEntity> categories;
+
+  /// Id da categoria atualmente escolhida.
+  final String? selectedCategoryId;
+
+  /// Disparado com o id da categoria tocada.
+  final ValueChanged<String> onCategorySelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveId = selectedCategoryId ?? categories.first.id;
+
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: categories.map((category) {
+        return CategoryPill(
+          label: category.label,
+          icon: iconForCategory(category),
+          color: colorForCategory(category),
+          isSelected: effectiveId == category.id,
+          semanticsPrefix: 'Selecionar categoria',
+          onTap: () => onCategorySelected(category.id),
+        );
+      }).toList(),
+    );
+  }
+}
+
+/// Pílula de categoria reutilizável: cápsula arredondada com ícone opcional.
+///
+/// É a aparência única das categorias no app. Quando [isSelected] é `true`,
+/// pinta com a [color] da categoria (ou `primary` como padrão) e ganha uma
+/// sombra suave; caso contrário fica branca com borda.
+class CategoryPill extends StatelessWidget {
+  const CategoryPill({
+    super.key,
     required this.label,
     required this.isSelected,
     required this.onTap,
     this.icon,
     this.color,
+    this.semanticsPrefix,
   });
 
+  /// Texto exibido na pílula.
   final String label;
+
+  /// Se a pílula está marcada.
   final bool isSelected;
+
+  /// Toque na pílula.
   final VoidCallback onTap;
+
+  /// Ícone opcional antes do texto.
   final IconData? icon;
+
+  /// Cor de destaque quando selecionada. Padrão: [AppColors.primary].
   final Color? color;
+
+  /// Prefixo de acessibilidade (ex.: "Filtrar por", "Selecionar categoria").
+  final String? semanticsPrefix;
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +166,7 @@ class _CategoryChip extends StatelessWidget {
     return Semantics(
       button: true,
       selected: isSelected,
-      label: 'Filtrar por $label',
+      label: semanticsPrefix == null ? label : '$semanticsPrefix $label',
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(

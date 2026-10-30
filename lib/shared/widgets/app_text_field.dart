@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -16,6 +17,7 @@ class AppTextField extends StatelessWidget {
     this.suffixIcon,
     this.obscureText = false,
     this.keyboardType,
+    this.inputFormatters,
     this.validator,
     this.onChanged,
     this.textInputAction,
@@ -38,6 +40,12 @@ class AppTextField extends StatelessWidget {
   final Widget? suffixIcon;
   final bool obscureText;
   final TextInputType? keyboardType;
+
+  /// Máscaras/filtros aplicados enquanto o usuário digita (ex.: telefone).
+  ///
+  /// `null` mantém o comportamento atual. São apenas visuais: a tela deve
+  /// persistir o valor limpo quando precisar (ver `onlyDigits`).
+  final List<TextInputFormatter>? inputFormatters;
   final String? Function(String?)? validator;
   final ValueChanged<String>? onChanged;
   final TextInputAction? textInputAction;
@@ -74,6 +82,7 @@ class AppTextField extends StatelessWidget {
           controller: controller,
           obscureText: obscureText,
           keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           validator: validator,
           onChanged: onChanged,
           textInputAction: textInputAction,
