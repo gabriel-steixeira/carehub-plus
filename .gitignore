@@ -47,6 +47,11 @@ app.*.map.json
 # Material de estudo e AI config (não versionar)
 material/
 .kiro/
+.agents/
+.worktrees/
+
+# Configurações locais do editor (não versionar)
+.vscode/
 
 # Android build intermediates
 /android/build/
