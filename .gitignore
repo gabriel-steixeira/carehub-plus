@@ -60,6 +60,10 @@ material/
 # Use env.example.json como modelo e rode com --dart-define-from-file=env.json
 env.json
 
+# Config do cliente Firebase Android (mantida apenas localmente).
+# Cada dev gera a sua via FlutterFire; não versionar.
+android/app/google-services.json
+
 # Credenciais de máquina e chaves privadas (NUNCA commitar!)
 # Rede de proteção caso alguém salve uma chave dentro do projeto por engano.
 *adminsdk*.json
