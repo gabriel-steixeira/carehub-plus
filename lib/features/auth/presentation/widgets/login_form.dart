@@ -193,11 +193,6 @@ class _LoginFormState extends State<LoginForm> {
                     const AuthGoogleSignInRequested(),
                   );
                 },
-                onFacebookPressed: () {
-                  context.read<AuthBloc>().add(
-                    const AuthFacebookSignInRequested(),
-                  );
-                },
               ),
               const SizedBox(height: AppSpacing.sm),
             ],

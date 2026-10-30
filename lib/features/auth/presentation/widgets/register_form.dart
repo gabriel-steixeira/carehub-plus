@@ -454,11 +454,6 @@ class _RegisterFormState extends State<RegisterForm> {
                     const AuthGoogleSignInRequested(),
                   );
                 },
-                onFacebookPressed: () {
-                  context.read<AuthBloc>().add(
-                    const AuthFacebookSignInRequested(),
-                  );
-                },
               ),
 
               const SizedBox(height: AppSpacing.sm),

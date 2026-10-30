@@ -137,24 +137,6 @@ void main() {
       });
     });
 
-    group('signInWithFacebook', () {
-      test('succeeds and ensures caregiver document is created if new', () async {
-        when(() => mockAuthService.signInWithFacebook())
-            .thenAnswer((_) async => mockUserCredential);
-        when(() => mockUserCredential.user).thenReturn(mockUser);
-        when(() => mockUser.uid).thenReturn('fb123');
-        when(() => mockUser.displayName).thenReturn('FB User');
-        when(() => mockUser.email).thenReturn('fb@example.com');
-        when(() => mockUser.photoURL).thenReturn(null);
-        when(() => mockDocumentSnapshot.exists).thenReturn(false);
-
-        await expectLater(authRepository.signInWithFacebook(), completes);
-
-        verify(() => mockDocumentReference.get()).called(1);
-        verify(() => mockDocumentReference.set(any())).called(1);
-      });
-    });
-
     group('signOut', () {
       test('succeeds when AuthService succeeds', () async {
         when(() => mockAuthService.signOut()).thenAnswer((_) async {});

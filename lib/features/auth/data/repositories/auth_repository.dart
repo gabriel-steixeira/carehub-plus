@@ -137,23 +137,6 @@ class AuthRepository {
     }
   }
 
-  /// Signs in with Facebook OAuth.
-  Future<void> signInWithFacebook() async {
-    try {
-      final credential = await _authService.signInWithFacebook();
-      final user = credential.user;
-      if (user != null) {
-        await _ensureCaregiverDocument(user);
-      }
-    } on FirebaseAuthException catch (e) {
-      throw _mapFirebaseException(e);
-    } on FirebaseException catch (e) {
-      throw AppException(e.message ?? 'Erro no banco de dados', code: e.code);
-    } catch (e) {
-      throw AppException(e.toString());
-    }
-  }
-
   /// Signs out the current user.
   Future<void> signOut() async {
     try {

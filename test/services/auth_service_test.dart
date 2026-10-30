@@ -1,9 +1,9 @@
 /*
  * CareHub Plus — Test / AuthService reauthentication
  *
- * Verifies the reauthentication flows added to AuthService (password, Google,
- * Facebook) and the currentProviderIds getter, using mocktail so no real
- * Firebase call is made.
+ * Verifies the reauthentication flows added to AuthService (password, Google)
+ * and the currentProviderIds getter, using mocktail so no real Firebase call
+ * is made.
  *
  * Author: Vitoria Lana
  * Created on: 15/10/2026
@@ -13,7 +13,6 @@
 
 // ignore_for_file: subtype_of_sealed_class
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:mocktail/mocktail.dart';
@@ -24,8 +23,6 @@ class MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
 class MockGoogleSignIn extends Mock implements GoogleSignIn {}
 
-class MockFacebookAuth extends Mock implements FacebookAuth {}
-
 class MockUser extends Mock implements User {}
 
 class MockUserInfo extends Mock implements UserInfo {}
@@ -35,7 +32,6 @@ class FakeAuthCredential extends Fake implements AuthCredential {}
 void main() {
   late MockFirebaseAuth mockFirebaseAuth;
   late MockGoogleSignIn mockGoogleSignIn;
-  late MockFacebookAuth mockFacebookAuth;
   late MockUser mockUser;
   late AuthService authService;
 
@@ -46,13 +42,11 @@ void main() {
   setUp(() {
     mockFirebaseAuth = MockFirebaseAuth();
     mockGoogleSignIn = MockGoogleSignIn();
-    mockFacebookAuth = MockFacebookAuth();
     mockUser = MockUser();
 
     authService = AuthService(
       firebaseAuth: mockFirebaseAuth,
       googleSignIn: mockGoogleSignIn,
-      facebookAuth: mockFacebookAuth,
     );
   });
 

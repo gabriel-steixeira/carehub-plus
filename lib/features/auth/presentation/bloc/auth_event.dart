@@ -24,11 +24,6 @@ class AuthGoogleSignInRequested extends AuthEvent {
   const AuthGoogleSignInRequested();
 }
 
-/// Requested Facebook sign-in.
-class AuthFacebookSignInRequested extends AuthEvent {
-  const AuthFacebookSignInRequested();
-}
-
 /// Submitted email + password + name sign up form.
 class AuthSignUpSubmitted extends AuthEvent {
   const AuthSignUpSubmitted({

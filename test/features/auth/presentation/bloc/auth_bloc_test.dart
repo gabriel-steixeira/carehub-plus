@@ -112,21 +112,6 @@ void main() {
       );
     });
 
-    group('AuthFacebookSignInRequested', () {
-      blocTest<AuthBloc, AuthState>(
-        'emits [loading, success] when signInWithFacebook succeeds',
-        build: () {
-          when(() => authRepository.signInWithFacebook()).thenAnswer((_) async {});
-          return authBloc;
-        },
-        act: (bloc) => bloc.add(const AuthFacebookSignInRequested()),
-        expect: () => const [
-          AuthState(status: AuthStatus.loading),
-          AuthState(status: AuthStatus.success),
-        ],
-      );
-    });
-
     group('AuthPasswordResetRequested', () {
       blocTest<AuthBloc, AuthState>(
         'emits [loading, success] when sendPasswordResetEmail succeeds',

@@ -53,7 +53,11 @@ class _RegisterView extends StatelessWidget {
             decoration: const BoxDecoration(gradient: AppColors.splashGradient),
             child: Column(
               children: [
-                const AppHeader(showProfile: false, showSettings: false),
+                const AppHeader(
+                  showProfile: false,
+                  showSettings: false,
+                  showNotifications: false,
+                ),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(

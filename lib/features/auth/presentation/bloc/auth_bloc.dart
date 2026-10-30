@@ -19,7 +19,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         super(const AuthState()) {
     on<AuthLoginSubmitted>(_onLoginSubmitted);
     on<AuthGoogleSignInRequested>(_onGoogleSignIn);
-    on<AuthFacebookSignInRequested>(_onFacebookSignIn);
     on<AuthSignUpSubmitted>(_onSignUpSubmitted);
     on<AuthPasswordResetRequested>(_onPasswordResetRequested);
   }
@@ -93,21 +92,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(state.copyWith(status: AuthStatus.loading));
     try {
       await _repository.signInWithGoogle();
-      emit(state.copyWith(status: AuthStatus.success));
-    } catch (e) {
-      emit(
-        state.copyWith(status: AuthStatus.failure, errorMessage: e.toString()),
-      );
-    }
-  }
-
-  Future<void> _onFacebookSignIn(
-    AuthFacebookSignInRequested event,
-    Emitter<AuthState> emit,
-  ) async {
-    emit(state.copyWith(status: AuthStatus.loading));
-    try {
-      await _repository.signInWithFacebook();
       emit(state.copyWith(status: AuthStatus.success));
     } catch (e) {
       emit(
