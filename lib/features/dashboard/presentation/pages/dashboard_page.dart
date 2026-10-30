@@ -25,6 +25,13 @@ import '../../../../shared/widgets/app_bottom_navigation.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/app_loading.dart';
+import '../../../categories/data/repositories/care_categories_repository.dart';
+import '../../../categories/presentation/bloc/care_categories_bloc.dart';
+import '../../../network/data/repositories/network_repository.dart';
+import '../../../network/presentation/bloc/network_bloc.dart';
+import '../../../tasks/data/repositories/tasks_repository.dart';
+import '../../../tasks/presentation/bloc/tasks_bloc.dart';
+import '../../../tasks/presentation/widgets/create_task_bottom_sheet.dart';
 import '../../data/repositories/dashboard_repository.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../widgets/active_profile_chip.dart';
@@ -40,10 +47,32 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => DashboardBloc(
-        repository: DashboardRepository(),
-      )..add(DashboardLoadEvent(selectedProfileId: initialProfileId)),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => DashboardBloc(
+            repository: DashboardRepository(),
+          )..add(DashboardLoadEvent(selectedProfileId: initialProfileId)),
+        ),
+        // Blocs necessários para o CreateTaskBottomSheet (aberto a partir de
+        // uma sugestão da Cora). O bottom sheet faz context.read destes blocs,
+        // então eles precisam existir acima dele na árvore do Dashboard.
+        BlocProvider(
+          create: (context) =>
+              TasksBloc(repository: TasksRepository())
+                ..add(TasksLoadEvent(careRecipientId: initialProfileId)),
+        ),
+        BlocProvider(
+          create: (context) =>
+              NetworkBloc(repository: NetworkRepository())
+                ..add(const NetworkLoadEvent()),
+        ),
+        BlocProvider(
+          create: (context) =>
+              CareCategoriesBloc(repository: CareCategoriesRepository())
+                ..add(const CareCategoriesLoadEvent()),
+        ),
+      ],
       child: const _DashboardView(),
     );
   }
@@ -269,11 +298,30 @@ class _DashboardContent extends StatelessWidget {
                 itemCount: summary.suggestions.length,
                 itemBuilder: (context, index) {
                   final sug = summary.suggestions[index];
+                  final selectedId = state.selectedProfileId;
                   return SuggestionCard(
                     suggestion: sug,
-                    onActionTap: () => context.push(AppRoutes.coraChat),
+                    onActionTap: selectedId.isEmpty
+                        ? null
+                        : () => CreateTaskBottomSheet.show(
+                            context,
+                            careRecipientId: selectedId,
+                            initialTitle: sug.title,
+                            initialDescription: sug.description,
+                          ),
                   );
                 },
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+              child: Text(
+                'A Cora é uma IA e pode cometer erros. Confira informações '
+                'importantes e não substitua orientação profissional.',
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
           ] else ...[

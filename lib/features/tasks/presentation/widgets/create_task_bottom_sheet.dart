@@ -18,13 +18,27 @@ import '../bloc/tasks_bloc.dart';
 
 /// Modal Bottom Sheet to create a new task.
 class CreateTaskBottomSheet extends StatefulWidget {
-  const CreateTaskBottomSheet({super.key, required this.careRecipientId});
+  const CreateTaskBottomSheet({
+    super.key,
+    required this.careRecipientId,
+    this.initialTitle,
+    this.initialDescription,
+  });
 
   final String careRecipientId;
+
+  /// Valor inicial opcional do campo de título (ex.: pré-preenchido por uma
+  /// sugestão da Cora). Quando nulo, o formulário abre vazio.
+  final String? initialTitle;
+
+  /// Valor inicial opcional do campo de descrição/instruções.
+  final String? initialDescription;
 
   static Future<void> show(
     BuildContext context, {
     required String careRecipientId,
+    String? initialTitle,
+    String? initialDescription,
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -36,7 +50,11 @@ class CreateTaskBottomSheet extends StatefulWidget {
           BlocProvider.value(value: context.read<CareCategoriesBloc>()),
           BlocProvider.value(value: context.read<NetworkBloc>()),
         ],
-        child: CreateTaskBottomSheet(careRecipientId: careRecipientId),
+        child: CreateTaskBottomSheet(
+          careRecipientId: careRecipientId,
+          initialTitle: initialTitle,
+          initialDescription: initialDescription,
+        ),
       ),
     );
   }
@@ -55,6 +73,13 @@ class _CreateTaskBottomSheetState extends State<CreateTaskBottomSheet> {
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _time = TimeOfDay.now();
   NetworkMemberModel? _selectedMember;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController.text = widget.initialTitle ?? '';
+    _descController.text = widget.initialDescription ?? '';
+  }
 
   @override
   void dispose() {
